@@ -8,8 +8,30 @@ let ctx: AudioContext | null = null;
 let muted = false;
 
 function getCtx(): AudioContext {
-  if (!ctx) ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  // iOS Safari (especially in standalone PWA mode) auto-suspends the
+  // AudioContext whenever the screen locks or the app loses focus, even
+  // briefly. Reusing a suspended context schedules sound silently — nothing
+  // audibly plays, no error is thrown. So every access must check state and
+  // resume, and a fully "closed" context (rare, but happens after long
+  // backgrounding) must be recreated from scratch.
+  if (!ctx || ctx.state === "closed") {
+    ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
   return ctx;
+}
+
+// Proactively resume as soon as the app becomes visible/focused again,
+// rather than waiting for the next sound trigger — this covers cases where
+// the first post-resume action a user takes isn't a button press (e.g. just
+// looking at the screen while a scheduled notification sound tries to fire).
+if (typeof document !== "undefined") {
+  const tryResume = () => { if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); };
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) tryResume(); });
+  window.addEventListener("focus", tryResume);
+  window.addEventListener("pageshow", tryResume);
 }
 
 export function setMuted(m: boolean) {
