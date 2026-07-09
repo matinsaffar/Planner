@@ -52,6 +52,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     border: "1px solid var(--line)",
     background: "var(--surface2)",
     color: "var(--ink)",
+    fontSize: 16,
   };
 
   if (!checked) return <div className="loading-screen">Checking session…</div>;
