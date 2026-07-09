@@ -33,17 +33,21 @@
 }
 *{box-sizing:border-box;}
 html,body{margin:0;height:100%;}
-html{background:var(--bg);}
-body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+/* Gradient lives on html so it always fills the full screen, including the
+   areas behind the iOS notch and home-indicator in standalone PWA mode —
+   those regions are painted before any body padding/safe-area logic applies. */
+html{background:var(--bg-grad);background-attachment:fixed;}
 input,select,textarea{font-size:16px;}
-body{font-family:var(--font-ui);background:var(--bg-grad);background-attachment:fixed;color:var(--ink);transition:background .3s,color .3s;position:relative;min-height:100vh;}
-body.has-user-bg{background:var(--bg);}
+body{font-family:var(--font-ui);background:transparent;color:var(--ink);transition:background .3s,color .3s;position:relative;min-height:100dvh;}
 body.has-user-bg::before{content:"";position:fixed;inset:0;z-index:-2;
   background-image:var(--user-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;}
 body.has-user-bg::after{content:"";position:fixed;inset:0;z-index:-1;
   background:var(--bg-grad);opacity:calc(1 - var(--user-bg-opacity,.35));transition:opacity .25s;}
-#root{max-width:100%;min-height:100vh;position:relative;background:var(--bg-grad);background-attachment:fixed;display:flex;flex-direction:column;}
-#root > div{flex:1;display:flex;flex-direction:column;min-height:100vh;}
+/* Safe-area padding moves here (not body) so the html/body gradient still
+   paints under the notch/home-indicator; only the actual content shifts inward. */
+#root{max-width:100%;min-height:100dvh;position:relative;background:transparent;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+#root > div{flex:1;display:flex;flex-direction:column;min-height:100%;}
 @media(min-width:760px){ #root{max-width:900px;margin:0 auto;} }
 
 .glass{
