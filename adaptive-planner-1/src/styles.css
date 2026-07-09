@@ -52,37 +52,16 @@
 html,
 body {
   margin: 0;
+  height: 100%;
 }
 
-/* Canonical iOS PWA notch fix: make the html box taller than the viewport by
-   exactly the top safe-area inset, and push its content down by the same
-   amount via padding. This means the gradient background paints the notch
-   region as ordinary document flow, instead of relying on the viewport-fixed
-   compositing that iOS handles inconsistently for gradients. */
+/* Solid fallback only — deliberately NOT using background-attachment:fixed
+   on html/body. That property has a long-standing WebKit bug on iOS Safari
+   and standalone PWAs where it fails to render reliably across the safe-area
+   boundary, no matter how padding/sizing is arranged around it. This was the
+   actual root cause of every earlier attempt failing. */
 html {
-  min-height: calc(100% + env(safe-area-inset-top));
-  padding-top: env(safe-area-inset-top);
-  background-color: var(--bg);
-  background-image: var(--bg-grad);
-  background-attachment: fixed;
-}
-
-/* Frosted "status bar" polish: blurs + fades whatever sits directly behind
-   the notch, so the time/battery icons stay legible against the gradient
-   without needing a hard-edged solid strip. */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top);
-  z-index: 900;
-  pointer-events: none;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
-  -webkit-mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
+  background: var(--bg);
 }
 
 input,
@@ -92,7 +71,6 @@ textarea {
 }
 
 body {
-  height: 100%;
   font-family: var(--font-ui);
   background: transparent;
   color: var(--ink);
@@ -101,11 +79,21 @@ body {
   min-height: 100dvh;
 }
 
-body.has-user-bg::before {
+/* The gradient lives on a genuine position:fixed;inset:0 layer instead —
+   exactly the technique .loading-screen and the custom-background layers
+   below already use successfully with zero notch issues. Fixed positioning
+   (not background-attachment) reliably covers the full device screen on iOS,
+   including behind the notch and home-indicator. */
+body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -2;
+  background: var(--bg-grad);
+}
+
+body.has-user-bg::before {
+  background: var(--bg);
   background-image: var(--user-bg-image);
   background-size: cover;
   background-position: center;
@@ -122,8 +110,24 @@ body.has-user-bg::after {
   transition: opacity .25s;
 }
 
-/* Bottom safe-area padding stays on #root (this part was already confirmed
-   working). Top padding is NOT duplicated here since html already handles it above. */
+/* Frosted "status bar" polish: blurs whatever sits directly behind the notch
+   so the time/battery icons stay legible against the gradient. */
+html::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  z-index: 900;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
+  -webkit-mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
+}
+
+/* Content padding for both safe-area edges lives on #root. */
 #root {
   max-width: 100%;
   min-height: 100dvh;
@@ -131,6 +135,7 @@ body.has-user-bg::after {
   background: transparent;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
