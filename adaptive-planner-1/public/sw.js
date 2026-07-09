@@ -1,11 +1,5 @@
-// Minimal service worker for offline caching and PWA installability.
-// This enables "Add to Home Screen" on iOS/Android to work as a real
-// installable app, and caches core app shell assets for offline load.
-// (Full background push notifications would require a push server —
-// see notifications.ts for details on current same-session limitations.)
-
-const CACHE_NAME = "adaptive-planner-v1";
-const CORE_ASSETS = ["/", "/index.html", "/manifest.json", "/icon-192.png", "/icon-512.png"];
+const CACHE_NAME = "adaptive-planner-v2"; // bump on every SW change to force cache reset
+const CORE_ASSETS = ["/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -25,6 +19,17 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // Navigation requests (index.html / SPA routes) — always go to network first.
+  // This guarantees users get the HTML that points to the CURRENT build's JS/CSS hashes.
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("/index.html"))
+    );
+    return;
+  }
+
+  // Everything else (hashed JS/CSS/images) — cache-first is safe, filenames change per build.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
