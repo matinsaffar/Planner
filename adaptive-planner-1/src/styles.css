@@ -112,20 +112,7 @@ body.has-user-bg::after {
 
 /* Frosted "status bar" polish: blurs whatever sits directly behind the notch
    so the time/battery icons stay legible against the gradient. */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top);
-  z-index: 900;
-  pointer-events: none;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
-  -webkit-mask: linear-gradient(to bottom, black, black 50%, rgba(0, 0, 0, .7) 75%, transparent 100%);
-}
+
 
 /* Content padding for both safe-area edges lives on #root. */
 #root {
@@ -135,8 +122,8 @@ html::before {
   background: transparent;
   display: flex;
   flex-direction: column;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+
+  /* remove safe-area padding here */
 }
 
 #root>div {
@@ -144,6 +131,14 @@ html::before {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media(min-width:760px) {
@@ -524,7 +519,7 @@ html::before {
 
 .fab {
   position: fixed;
-  bottom: 26px;
+  bottom: calc(26px + env(safe-area-inset-bottom));
   right: 24px;
   width: 58px;
   height: 58px;
@@ -557,6 +552,8 @@ html::before {
 .page-modal {
   position: fixed;
   inset: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--bg);
   z-index: 200;
   display: flex;

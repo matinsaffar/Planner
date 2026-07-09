@@ -375,10 +375,18 @@ export default function App() {
     return d <= 1;
   }
 
-  if (!ready) return <div className="loading-screen">Loading your planner…</div>;
-
+  if (!ready) {
   return (
-    <div>
+    <div className="app-shell">
+      <div className="loading-screen">
+        Loading your planner…
+      </div>
+    </div>
+  );
+}
+
+return (
+  <div className="app-shell">
       {reviewTasks.length > 0 && (
         <EndOfDayReview tasks={reviewTasks} onResolve={resolveReview} onClose={() => setReviewTasks([])} />
       )}
