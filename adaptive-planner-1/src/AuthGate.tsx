@@ -22,9 +22,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function sendLink() {
-    await supabase.auth.signInWithOtp({ email });
-    setSent(true);
-  }
+  await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin },
+  });
+  setSent(true);
+}
 
   if (!checked) return <div className="loading-screen">Checking session…</div>;
 
@@ -37,7 +40,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             <p style={{ fontSize: 13, color: "var(--muted)" }}>Sign in with your email to access your planner.</p>
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
               style={{ padding: 10, borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface2)", color: "var(--ink)" }} />
-            <button className="btn btn-primary" style={{ padding: "10px 20px" }} onClick={sendLink}>Send magic link</button>
+            <button className="btn btn-primary" style={{ padding: "10px 20px", flex: "none", width: "auto", alignSelf: "center" }} onClick={sendLink}>Send magic link</button>
           </>
         ) : (
           <p style={{ fontSize: 13, color: "var(--muted)" }}>Check your email and tap the sign-in link to continue.</p>
