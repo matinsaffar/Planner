@@ -108,22 +108,6 @@ export default function SubcategoryDetail({ sub, category, tasks, goals, onClose
                 </div>
               </div>
             )}
-
-            {badgePromptGoal && (
-              <div className="overlay" onClick={() => setBadgePromptGoal(null)}>
-                <div className="sheet glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 340 }}>
-                  <h3>🏆 Choose a badge</h3>
-                  <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>Pick a badge to celebrate "{badgePromptGoal.title}".</p>
-                  <BadgePicker value={null} onChange={(b) => {
-                    const goalId = badgePromptGoal.id;
-                    setBadgePromptGoal(null);
-                    setAchievingId(goalId);
-                    setTimeout(() => { onAchieveGoal(goalId, b); setAchievingId(null); }, 450);
-                  }} />
-                  <div className="btn-row"><button className="btn btn-ghost" onClick={() => setBadgePromptGoal(null)}>Cancel</button></div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="glass section">
@@ -149,6 +133,26 @@ export default function SubcategoryDetail({ sub, category, tasks, goals, onClose
           </div>
         </div>
       </div>
+
+      {/* Moved OUT of any .glass container: .glass uses backdrop-filter, which per
+          spec creates a new containing block for descendant position:fixed elements —
+          that was clipping this overlay behind the header/Upcoming section. As a direct
+          child of .page-modal it now covers the full screen correctly. */}
+      {badgePromptGoal && (
+        <div className="overlay" style={{ zIndex: 500 }} onClick={() => setBadgePromptGoal(null)}>
+          <div className="sheet glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 340 }}>
+            <h3>🏆 Choose a badge</h3>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>Pick a badge to celebrate "{badgePromptGoal.title}".</p>
+            <BadgePicker value={null} onChange={(b) => {
+              const goalId = badgePromptGoal.id;
+              setBadgePromptGoal(null);
+              setAchievingId(goalId);
+              setTimeout(() => { onAchieveGoal(goalId, b); setAchievingId(null); }, 450);
+            }} />
+            <div className="btn-row"><button className="btn btn-ghost" onClick={() => setBadgePromptGoal(null)}>Cancel</button></div>
+          </div>
+        </div>
+      )}
 
       {showGoalForm && (
         <div className="overlay" onClick={() => setShowGoalForm(false)}>

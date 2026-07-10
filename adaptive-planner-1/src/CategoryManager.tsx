@@ -5,37 +5,25 @@ import BannerCropper from "./BannerCropper";
 
 const PALETTE = ["#7dd3c0", "#a78bfa", "#f4a261", "#ef6461", "#4f9d69", "#e8a4c9", "#5b8bd6", "#c9a24b"];
 
-function fileToDataUrl(file: File): Promise<string> {
+function fileToDataUrl(file) {
   return new Promise((res) => {
     const reader = new FileReader();
-    reader.onload = () => res(reader.result as string);
+    reader.onload = () => res(reader.result);
     reader.readAsDataURL(file);
   });
 }
 
-interface Props {
-  categories: any[];
-  subcategories: any[];
-  onAddCategory: (name: string, icon: string, color: string, banner: string | null, gif: string | null) => Promise<string>;
-  onEditCategory: (id: string, patch: any) => Promise<void>;
-  onDeleteCategory: (id: string) => Promise<void>;
-  onAddSubcategory: (categoryId: string, title: string, vitality: string, color: string, icon: string, gif: string | null) => Promise<string>;
-  onEditSubcategory: (id: string, patch: any) => Promise<void>;
-  onDeleteSubcategory: (id: string) => Promise<void>;
-  onSelectSubcategory: (catId: string, subId: string) => void;
-}
-
-export default function CategoryManager(props: Props) {
+export default function CategoryManager(props) {
   const { categories, subcategories, onAddCategory, onEditCategory, onDeleteCategory,
     onAddSubcategory, onEditSubcategory, onDeleteSubcategory, onSelectSubcategory } = props;
   const [showNewCat, setShowNewCat] = useState(false);
-  const [editCat, setEditCat] = useState<any>(null);
-  const [showNewSub, setShowNewSub] = useState<string | null>(null);
-  const [editSub, setEditSub] = useState<any>(null);
+  const [editCat, setEditCat] = useState(null);
+  const [showNewSub, setShowNewSub] = useState(null);
+  const [editSub, setEditSub] = useState(null);
 
   return (
     <div>
-      {categories.map((c: any) => (
+      {categories.map((c) => (
         <div key={c.id} className="glass section cat-section">
           <h2>
             <span>{c.icon} {c.name}</span>
@@ -44,13 +32,10 @@ export default function CategoryManager(props: Props) {
               <button className="card-edit-btn" onClick={() => setShowNewSub(c.id)}>+ Subcategory</button>
             </span>
           </h2>
-          {/* Category banner intentionally not shown here — it already
-              appears on the Home tab's category cards. Showing it again here
-              pushed the subcategory grid down and disrupted its layout every
-              time a banner was added, and at this width it never looked
-              right anyway. Only subcategory banners render on this page. */}
+          {/* Category banner intentionally not shown here — only on Home tab cards.
+              Subcategory banners render below instead. */}
           <div className="cat-grid">
-            {subcategories.filter((s: any) => s.category_id === c.id).map((s: any) => (
+            {subcategories.filter((s) => s.category_id === c.id).map((s) => (
               <div key={s.id} className="cat-card" onClick={() => onSelectSubcategory(c.id, s.id)}>
                 {s.gif ? (
                   <div className="cat-banner" style={{ backgroundImage: `url(${s.gif})` }} />
@@ -66,7 +51,7 @@ export default function CategoryManager(props: Props) {
                   onClick={(e) => { e.stopPropagation(); setEditSub(s); }}>Edit</button>
               </div>
             ))}
-            {subcategories.filter((s: any) => s.category_id === c.id).length === 0 && (
+            {subcategories.filter((s) => s.category_id === c.id).length === 0 && (
               <EmptyState type="categories" fallback="No subcategories yet — add one above." />
             )}
           </div>
@@ -99,20 +84,20 @@ export default function CategoryManager(props: Props) {
   );
 }
 
-function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
+function CategoryModal({ initial, onClose, onSave, onDelete }) {
   const [name, setName] = useState(initial?.name || "");
   const [icon, setIcon] = useState(initial?.icon || "📁");
   const [color, setColor] = useState(initial?.color || PALETTE[0]);
-  const [banner, setBanner] = useState<string | null>(initial?.banner || null);
-  const [gif, setGif] = useState<string | null>(initial?.gif || null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [banner, setBanner] = useState(initial?.banner || null);
+  const [gif, setGif] = useState(initial?.gif || null);
+  const [cropSrc, setCropSrc] = useState(null);
 
-  async function handleBanner(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleBanner(e) {
     const file = e.target.files?.[0];
     if (file) setCropSrc(await fileToDataUrl(file));
     e.target.value = "";
   }
-  async function handleGif(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleGif(e) {
     const file = e.target.files?.[0];
     if (file) setGif(await fileToDataUrl(file));
   }
@@ -149,8 +134,8 @@ function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
           <div className="color-swatches">
             {PALETTE.map((c) => (<div key={c} className={"swatch" + (c === color ? " sel" : "")} style={{ background: c }} onClick={() => setColor(c)} />))}
             <label className="color-picker-icon-btn" title="Custom color">
-                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-              </label>
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+            </label>
           </div>
         </div>
         <div className="btn-row">
@@ -163,15 +148,15 @@ function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
   );
 }
 
-function SubcategoryModal({ initial, onClose, onSave, onDelete }: any) {
+function SubcategoryModal({ initial, onClose, onSave, onDelete }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [vitality, setVitality] = useState(initial?.vitality || "Normal");
   const [color, setColor] = useState(initial?.color || PALETTE[1]);
   const [icon, setIcon] = useState(initial?.icon || "🔹");
-  const [gif, setGif] = useState<string | null>(initial?.gif || null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [gif, setGif] = useState(initial?.gif || null);
+  const [cropSrc, setCropSrc] = useState(null);
 
-  async function handleGif(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleGif(e) {
     const file = e.target.files?.[0];
     if (file) setCropSrc(await fileToDataUrl(file));
     e.target.value = "";
@@ -212,8 +197,8 @@ function SubcategoryModal({ initial, onClose, onSave, onDelete }: any) {
           <div className="color-swatches">
             {PALETTE.map((c) => (<div key={c} className={"swatch" + (c === color ? " sel" : "")} style={{ background: c }} onClick={() => setColor(c)} />))}
             <label className="color-picker-icon-btn" title="Custom color">
-                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-              </label>
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+            </label>
           </div>
         </div>
         <div className="btn-row">

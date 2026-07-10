@@ -41,6 +41,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [badgePromptGoal, setBadgePromptGoal] = useState<any>(null);
   const [achievingId, setAchievingId] = useState<string | null>(null);
+  const [editBlock, setEditBlock] = useState<any>(null);
   const [openHallCats, setOpenHallCats] = useState<string[]>([]);
   const [pendingDrop, setPendingDrop] = useState<{ taskId: string; hour: number; minute: number; date: string } | null>(null);
   const [conflictInfo, setConflictInfo] = useState<{ type: string; item: any } | null>(null);
@@ -198,6 +199,14 @@ export default function App() {
     await insertRow("blocks", { id: b.id, title: b.title, date: b.date, start_time: b.start, end_time: b.end, repeat: b.repeat });
     await reloadAll();
   }
+  async function updateBlock(b: any) {
+    await updateRow("blocks", b.id, { title: b.title, date: b.date, start_time: b.start, end_time: b.end });
+    await reloadAll();
+  }
+  async function deleteBlockRow(id: string) {
+    await deleteRow("blocks", id);
+    await reloadAll();
+  }
 
   async function addCategory(name: string, icon: string, color: string, banner: string | null, gif: string | null) {
     const id = uid();
@@ -206,8 +215,14 @@ export default function App() {
   }
   async function editCategory(id: string, patch: any) { await updateRow("categories", id, patch); await reloadAll(); }
   async function deleteCategory(id: string) {
+    const relatedTasks = tasks.filter((t: any) => t.category === id);
+    const relatedReminders = reminders.filter((r: any) => r.category === id);
+    const relatedGoals = goals.filter((g: any) => g.category === id);
+    for (const t of relatedTasks) await updateRow("tasks", t.id, { status: "Cancelled" });
+    for (const r of relatedReminders) await updateRow("reminders", r.id, { hidden: true });
+    for (const g of relatedGoals) await updateRow("goals", g.id, { status: "Cancelled" });
     await updateRow("categories", id, { archived: true });
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    await reloadAll();
   }
   async function addSubcategory(categoryId: string, title: string, vitality: string, color: string, icon: string, gif: string | null) {
     const id = uid();
@@ -216,9 +231,15 @@ export default function App() {
   }
   async function editSubcategory(id: string, patch: any) { await updateRow("subcategories", id, patch); await reloadAll(); }
   async function deleteSubcategory(id: string) {
-    await updateRow("subcategories", id, { archived: true });
-    setSubcategories((prev) => prev.filter((s) => s.id !== id));
-  }
+  const relatedTasks = tasks.filter((t: any) => t.subcategory === id);
+  const relatedReminders = reminders.filter((r: any) => r.subcategory === id);
+  const relatedGoals = goals.filter((g: any) => g.subcategory === id);
+  for (const t of relatedTasks) await updateRow("tasks", t.id, { status: "Cancelled" });
+  for (const r of relatedReminders) await updateRow("reminders", r.id, { hidden: true });
+  for (const g of relatedGoals) await updateRow("goals", g.id, { status: "Cancelled" });
+  await updateRow("subcategories", id, { archived: true });
+  await reloadAll();
+}
   async function saveGoal(g: any) {
     const exists = goals.some((x) => x.id === g.id);
     if (exists) await updateRow("goals", g.id, g);
@@ -489,6 +510,7 @@ return (
             onOpenTask={setDetailTask}
             onDropTask={handleDropOnTimeline}
             onReplaceConflict={replaceConflictAndDrop}
+            onEditBlock={(b: any) => setEditBlock({ ...b, start: b.start_time, end: b.end_time })}
             cardOpacity={cardOpacity}
           />
         </>
@@ -698,6 +720,8 @@ return (
             <h3>Edit Reminder</h3>
             <div className="field"><label>Title</label>
               <input value={editReminder.title} onChange={(e) => setEditReminder({ ...editReminder, title: e.target.value })} /></div>
+            <div className="field"><label>Date</label>
+              <input type="date" value={editReminder.date} onChange={(e) => setEditReminder({ ...editReminder, date: e.target.value })} /></div>
             <div className="field"><label>Time</label>
               <input type="time" value={editReminder.time} onChange={(e) => setEditReminder({ ...editReminder, time: e.target.value })} /></div>
             <div className="btn-row">
@@ -708,6 +732,27 @@ return (
           </div>
         </div>
       )}
+      {editBlock && (
+        <div className="overlay" onClick={() => setEditBlock(null)}>
+          <div className="sheet glass" onClick={(e) => e.stopPropagation()}>
+           <h3>Edit Occupied Block</h3>
+          <div className="field"><label>Title</label>
+        <input value={editBlock.title} onChange={(e) => setEditBlock({ ...editBlock, title: e.target.value })} /></div>
+      <div className="field"><label>Date</label>
+        <input type="date" value={editBlock.date} onChange={(e) => setEditBlock({ ...editBlock, date: e.target.value })} /></div>
+      <div className="field"><label>Start time</label>
+        <input type="time" value={editBlock.start} onChange={(e) => setEditBlock({ ...editBlock, start: e.target.value })} /></div>
+      <div className="field"><label>End time</label>
+        <input type="time" value={editBlock.end} onChange={(e) => setEditBlock({ ...editBlock, end: e.target.value })} /></div>
+      <div className="btn-row">
+        <button className="btn btn-danger" onClick={async () => { await deleteBlockRow(editBlock.id); setEditBlock(null); }}>Delete</button>
+        <button className="btn btn-ghost" onClick={() => setEditBlock(null)}>Cancel</button>
+        <button className="btn btn-primary" onClick={async () => { await updateBlock(editBlock); setEditBlock(null); }}>Save</button>
+      </div>
+    </div>
+  </div>
+)}
+
       {openSub && (
         <SubcategoryDetail
           sub={openSub.sub} category={openSub.cat}
