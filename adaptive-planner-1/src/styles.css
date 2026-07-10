@@ -855,7 +855,6 @@ body.has-user-bg::after {
 
 .unstarted-panel {
   overflow-y: auto;
-  padding: 4px 2px 14px;
 }
 
 .timeline.drop-active {
@@ -1296,6 +1295,10 @@ input[type="date"] {
 .banner-upload {
   width: 100%;
   height: 100px;
+  padding: 12px;
+  box-sizing: border-box;
+  text-align: center;
+  line-height: 1.4;
   border-radius: 14px;
   border: 1px dashed var(--border);
   display: flex;
@@ -1437,6 +1440,12 @@ input[type="date"] {
   position: relative;
   color: var(--ink);
   box-sizing: border-box;
+}
+.sheet .field input[type="date"],
+.sheet .field input[type="time"] {
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
 }
 
 @media (max-width:380px) {
@@ -2423,23 +2432,15 @@ button.mini-btn[style*="position:absolute"] {
    padding that makes them look off-center even inside a flex-centered box.
    This is pixel-true centered on every device/font since it's pure CSS. */
 .color-picker-icon-btn::before {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--ink);
-  opacity: .75;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .color-picker-icon-btn::after {
-  content: "";
-  position: absolute;
-  width: 2px;
-  height: 12px;
-  border-radius: 1px;
-  background: var(--ink);
-  opacity: .75;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .color-picker-icon-btn:hover {
