@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import EmptyState from "./EmptyState";
 import { sound } from "./sound";
+import BannerCropper from "./BannerCropper";
 
 const PALETTE = ["#7dd3c0", "#a78bfa", "#f4a261", "#ef6461", "#4f9d69", "#e8a4c9", "#5b8bd6", "#c9a24b"];
 
@@ -43,7 +44,11 @@ export default function CategoryManager(props: Props) {
               <button className="card-edit-btn" onClick={() => setShowNewSub(c.id)}>+ Subcategory</button>
             </span>
           </h2>
-          {c.banner && <div className="cat-banner" style={{ backgroundImage: `url(${c.banner})`, borderRadius: 12, marginBottom: 10 }} />}
+          {/* Category banner intentionally not shown here — it already
+              appears on the Home tab's category cards. Showing it again here
+              pushed the subcategory grid down and disrupted its layout every
+              time a banner was added, and at this width it never looked
+              right anyway. Only subcategory banners render on this page. */}
           <div className="cat-grid">
             {subcategories.filter((s: any) => s.category_id === c.id).map((s: any) => (
               <div key={s.id} className="cat-card" onClick={() => onSelectSubcategory(c.id, s.id)}>
@@ -100,10 +105,12 @@ function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
   const [color, setColor] = useState(initial?.color || PALETTE[0]);
   const [banner, setBanner] = useState<string | null>(initial?.banner || null);
   const [gif, setGif] = useState<string | null>(initial?.gif || null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   async function handleBanner(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setBanner(await fileToDataUrl(file));
+    if (file) setCropSrc(await fileToDataUrl(file));
+    e.target.value = "";
   }
   async function handleGif(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -114,10 +121,22 @@ function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
     <div className="overlay" onClick={onClose}>
       <div className="sheet glass" onClick={(e) => e.stopPropagation()}>
         <h3>{initial ? "Edit Category" : "New Category"}</h3>
-        <label className="banner-upload" style={banner ? { backgroundImage: `url(${banner})` } : {}}>
-          {!banner && "Click to upload a banner image"}
-          <input type="file" accept="image/*" onChange={handleBanner} style={{ display: "none" }} />
-        </label>
+        <div className="banner-upload-row">
+          <label className="banner-upload" style={banner ? { backgroundImage: `url(${banner})` } : {}}>
+            {!banner && "Click to upload a banner image"}
+            <input type="file" accept="image/*" onChange={handleBanner} style={{ display: "none" }} />
+          </label>
+          {banner && (
+            <button type="button" className="banner-remove-btn" title="Remove banner" onClick={() => setBanner(null)}>✕</button>
+          )}
+        </div>
+        {cropSrc && (
+          <BannerCropper
+            src={cropSrc}
+            onCancel={() => setCropSrc(null)}
+            onConfirm={(cropped) => { setBanner(cropped); setCropSrc(null); }}
+          />
+        )}
         <div className="field" style={{ marginTop: 14 }}><label>Category name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Fitness" /></div>
         <div className="field"><label>Icon (emoji)</label>
@@ -130,7 +149,6 @@ function CategoryModal({ initial, onClose, onSave, onDelete }: any) {
           <div className="color-swatches">
             {PALETTE.map((c) => (<div key={c} className={"swatch" + (c === color ? " sel" : "")} style={{ background: c }} onClick={() => setColor(c)} />))}
             <label className="color-picker-icon-btn" title="Custom color">
-                🎨
                 <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
               </label>
           </div>
@@ -151,10 +169,12 @@ function SubcategoryModal({ initial, onClose, onSave, onDelete }: any) {
   const [color, setColor] = useState(initial?.color || PALETTE[1]);
   const [icon, setIcon] = useState(initial?.icon || "🔹");
   const [gif, setGif] = useState<string | null>(initial?.gif || null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   async function handleGif(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setGif(await fileToDataUrl(file));
+    if (file) setCropSrc(await fileToDataUrl(file));
+    e.target.value = "";
   }
 
   return (
@@ -165,19 +185,33 @@ function SubcategoryModal({ initial, onClose, onSave, onDelete }: any) {
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Thesis" /></div>
         <div className="field"><label>Icon (emoji)</label>
           <input value={icon} onChange={(e) => setIcon(e.target.value)} /></div>
-        <div className="field"><label>GIF (optional)</label>
-          <input type="file" accept="image/gif,image/*" onChange={handleGif} />
-          {gif && <img src={gif} alt="" style={{ height: 40, marginTop: 6, borderRadius: 8 }} />}
+        <div className="field">
+          <label>Banner (optional — shown on this subcategory's card instead of its color)</label>
+          <div className="banner-upload-row">
+            <label className="banner-upload" style={gif ? { backgroundImage: `url(${gif})` } : {}}>
+              {!gif && "Click to upload a banner image"}
+              <input type="file" accept="image/*" onChange={handleGif} style={{ display: "none" }} />
+            </label>
+            {gif && (
+              <button type="button" className="banner-remove-btn" title="Remove banner" onClick={() => setGif(null)}>✕</button>
+            )}
+          </div>
+          {cropSrc && (
+            <BannerCropper
+              src={cropSrc}
+              onCancel={() => setCropSrc(null)}
+              onConfirm={(cropped) => { setGif(cropped); setCropSrc(null); }}
+            />
+          )}
         </div>
         <div className="field"><label>Vitality</label>
           <select value={vitality} onChange={(e) => setVitality(e.target.value)}>
             <option>Normal</option><option>High</option><option>Critical</option>
           </select></div>
-        <div className="field"><label>Color</label>
+        <div className="field"><label>Color{gif ? " (used if banner is removed)" : ""}</label>
           <div className="color-swatches">
             {PALETTE.map((c) => (<div key={c} className={"swatch" + (c === color ? " sel" : "")} style={{ background: c }} onClick={() => setColor(c)} />))}
             <label className="color-picker-icon-btn" title="Custom color">
-                🎨
                 <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
               </label>
           </div>

@@ -1309,6 +1309,54 @@ input[type="date"] {
   position: relative;
 }
 
+.banner-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-upload-row .banner-upload {
+  flex: 1;
+}
+
+.banner-remove-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 100, 97, .15);
+  border: 1px solid rgba(239, 100, 97, .4);
+  color: var(--danger);
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform .15s, background .15s;
+}
+
+.banner-remove-btn:hover {
+  background: rgba(239, 100, 97, .28);
+  transform: scale(1.06);
+}
+
+.banner-crop-viewport {
+  position: relative;
+  width: 100%;
+  height: 46vw;
+  max-height: 220px;
+  min-height: 120px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+  cursor: grab;
+}
+
+.banner-crop-viewport:active {
+  cursor: grabbing;
+}
+
 .subtask-chip {
   display: flex;
   align-items: center;
@@ -2087,9 +2135,15 @@ input[type="date"] {
 
 .badge-picker-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* minmax(0,1fr) instead of plain 1fr — without this, grid tracks refuse to
+     shrink below each button's min-content width, so the 5th column blows
+     out past the sheet's edge instead of wrapping to fit. That was the
+     actual cause of the badge picker looking "trimmed" — items were
+     literally overflowing the modal's bounds, not being clipped by design. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
+  overflow: hidden;
 }
 
 .badge-picker-item {
@@ -2354,11 +2408,37 @@ button.mini-btn[style*="position:absolute"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
   cursor: pointer;
-  background: var(--glass-strong);
-  border: 1px solid var(--border);
+  background: linear-gradient(155deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, .06) 60%, rgba(255, 255, 255, .02) 100%);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .15), inset 0 1px 0 rgba(255, 255, 255, .5);
   transition: transform .15s, background .15s;
+  flex-shrink: 0;
+}
+
+/* A drawn plus sign instead of an emoji glyph — emoji have inherent baseline
+   padding that makes them look off-center even inside a flex-centered box.
+   This is pixel-true centered on every device/font since it's pure CSS. */
+.color-picker-icon-btn::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+  opacity: .75;
+}
+
+.color-picker-icon-btn::after {
+  content: "";
+  position: absolute;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--ink);
+  opacity: .75;
 }
 
 .color-picker-icon-btn:hover {
