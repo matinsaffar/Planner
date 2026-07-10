@@ -48,6 +48,10 @@ export default function App() {
     const saved = localStorage.getItem("tl-card-opacity");
     return saved ? parseFloat(saved) : 1;
   });
+  useEffect(() => {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0d14' : '#f4f6fb');
+}, [theme]);
   function setCardOpacity(v: number) {
     setCardOpacityState(v);
     localStorage.setItem("tl-card-opacity", String(v));
