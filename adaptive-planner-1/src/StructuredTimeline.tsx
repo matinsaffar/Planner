@@ -10,7 +10,8 @@ interface Props {
   onOpenTask: (t: any) => void;
   onDropTask: (taskId: string, hour: number, minute: number) => Promise<{ ok: boolean; conflict?: { type: string; item: any } }>;
   onReplaceConflict?: () => void;
-  onEditBlock?: (b: any) => void;
+  onEditBlock?: (block: any) => void;
+  onDeleteBlock?: (blockId: string) => void;
   cardOpacity?: number;
 }
 
@@ -22,7 +23,7 @@ function fmtHour(h: number) {
   return String(h % 24).padStart(2, "0") + ":00";
 }
 
-export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = [], subInfo, onOpenTask, onDropTask, onReplaceConflict, onEditBlock, cardOpacity = 1 }: Props) {
+export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = [], subInfo, onOpenTask, onDropTask, onReplaceConflict, onEditBlock, onDeleteBlock, cardOpacity = 1 }: Props) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [ghostTop, setGhostTop] = useState<number | null>(null);
@@ -33,19 +34,19 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragStateRef = useRef<{ startY: number; startPct: number } | null>(null);
 
-  // Guard against the browser's default drag/drop behavior (which on iOS PWAs
-  // can fall back to a "search" / navigation action) whenever a drag escapes
-  // any of our designated drop zones. Without this, dropping outside the
-  // timeline strip triggers the OS-level default handler.
+  // Prevent iOS/Safari (and any browser) from navigating when a drag payload
+  // (task UUID as text/plain) is dropped outside the timeline. Without this,
+  // Safari treats the string as a URL and redirects to a broken page.
   useEffect(() => {
-    const preventDefault = (e: DragEvent) => e.preventDefault();
-    window.addEventListener("dragover", preventDefault);
-    window.addEventListener("drop", preventDefault);
+    const stop = (e: DragEvent) => { e.preventDefault(); };
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
     return () => {
-      window.removeEventListener("dragover", preventDefault);
-      window.removeEventListener("drop", preventDefault);
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("drop", stop);
     };
   }, []);
+
 
   function yToTime(clientY: number) {
     if (!timelineRef.current) return { hour: START_HOUR, minute: 0, top: 0 };
@@ -199,10 +200,28 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
             const top = ((sh - START_HOUR) * 60 + sm) * (HOUR_HEIGHT / 60);
             const height = Math.max(20, ((eh * 60 + em) - (sh * 60 + sm)) * (HOUR_HEIGHT / 60));
             return (
-              <div key={b.id} className="tl-block" style={{ position: "absolute", top, left: 8, right: 8, height, opacity: cardOpacity, cursor: "pointer" }}
-                onClick={(e) => { e.stopPropagation(); onEditBlock && onEditBlock(b); }}>
+              <div
+                key={b.id}
+                className="tl-block"
+                style={{ position: "absolute", top, left: 8, right: 8, height, opacity: cardOpacity, zIndex: 2 }}
+                role="button"
+                tabIndex={0}
+                title="Tap to edit or delete this occupied block"
+                onClick={(e) => { e.stopPropagation(); onEditBlock?.(b); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEditBlock?.(b); } }}
+              >
                 <div className="time">🔒 {b.start_time}–{b.end_time}</div>
                 <div className="title">{b.title}</div>
+                {onDeleteBlock && (
+                  <button
+                    className="mini-btn"
+                    style={{ position: "absolute", top: 4, right: 4, padding: "2px 8px", fontSize: 11 }}
+                    onClick={(e) => { e.stopPropagation(); if (window.confirm(`Delete "${b.title}"?`)) onDeleteBlock(b.id); }}
+                    aria-label="Delete block"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             );
           })}
@@ -273,7 +292,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
             );
           })}
         </div>
-        <p className="unstarted-hint">
+        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 10 }}>
           Drag a card up into the timeline to schedule it — drag the handle above to resize this view.
         </p>
       </div>
