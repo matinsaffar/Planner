@@ -4,8 +4,8 @@
   "description": "A cozy adaptive daily planner with goals, tasks, reminders, and a Hall of Goals.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b0d14",
-  "theme_color": "#0b0d14",
+  "background_color": "#e9ebf1",
+  "theme_color": "#e9ebf1",
   "orientation": "portrait",
   "icons": [
     {
