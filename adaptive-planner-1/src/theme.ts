@@ -20,7 +20,7 @@ export function useTheme() {
   const [bgImage, setBgImageState] = useState<string | null>(() => localStorage.getItem("planner_bg_image"));
   const [bgOpacity, setBgOpacityState] = useState<number>(() => {
     const v = localStorage.getItem("planner_bg_opacity");
-    return v ? parseFloat(v) : 0.35;
+    return v ? parseFloat(v) : 0.65;
   });
 
   useEffect(() => {
