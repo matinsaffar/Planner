@@ -45,7 +45,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
   const [dragOver, setDragOver] = useState(false);
   const [ghostTop, setGhostTop] = useState<number | null>(null);
   const [ghostLabel, setGhostLabel] = useState("");
-  const [timelineHeightPct, setTimelineHeightPct] = useState(68);
+  const [timelineHeightPct, setTimelineHeightPct] = useState(62);
   const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
   const [conflictDetails, setConflictDetails] = useState<{ type: string; item: any } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
       const deltaPx = ev.clientY - dragStateRef.current.startY;
       const containerH = window.innerHeight * 0.75;
       const deltaPct = (deltaPx / containerH) * 100;
-      const next = Math.min(85, Math.max(30, dragStateRef.current.startPct + deltaPct));
+      const next = Math.min(78, Math.max(30, dragStateRef.current.startPct + deltaPct));
       setTimelineHeightPct(next);
     };
     const onUp = () => {
@@ -300,10 +300,16 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
             const progressPct = taskEndMin > taskStartMin ? (passedMin / (taskEndMin - taskStartMin)) * 100 : 0;
             const isPast = !isFinished && nowMinTehran >= taskEndMin;
             const isInProgress = !isFinished && nowMinTehran >= taskStartMin && nowMinTehran < taskEndMin;
+            // Below ~56px there isn't room for the normal 3-line stack
+            // (time / title / subcategory chip) without the flex box
+            // clipping something — collapse to a single condensed row
+            // instead so short tasks (e.g. a 30-min slot) stay fully
+            // readable rather than getting silently cut off.
+            const isCompact = visibleHeight < 56;
 
             return (
               <div key={t.id} draggable={!isFinished}
-                className={"tl-item" + (hasOverlap && !isFinished ? " overlap" : "") + (isFinished ? " finished" : "") + (bg ? " custom-color" : "") + (isPast ? " past" : "") + (isInProgress ? " in-progress" : "")}
+                className={"tl-item" + (hasOverlap && !isFinished ? " overlap" : "") + (isFinished ? " finished" : "") + (bg ? " custom-color" : "") + (isPast ? " past" : "") + (isInProgress ? " in-progress" : "") + (isCompact ? " compact" : "")}
                 style={{ position: "absolute", top, left: 8, right: 8, height: visibleHeight,
                   background: bg || undefined, cursor: isFinished ? "pointer" : "grab", zIndex: isFinished ? 1 : 2,
                   outline: hasOverlap && !isFinished ? "2px solid var(--danger)" : "none", opacity: cardOpacity }}
@@ -320,9 +326,19 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
                     <div className="grain" />
                   </div>
                 )}
-                <div className="time">{t.time || "—"} · {statusLabel}{hasOverlap && !isFinished ? " · ⚠️ overlap" : ""}</div>
-                <div className="title">{t.title}</div>
-                {sub && <div className="sub-tag-chip" style={{ background: sub.color, color: contrastText(sub.color) }}>{sub.icon} {sub.title}</div>}
+                {isCompact ? (
+                  <div className="tl-compact-row">
+                    <span className="time">{t.time || "—"}</span>
+                    <span className="title">{t.title}</span>
+                    {hasOverlap && !isFinished && <span aria-label="Overlaps another item">⚠️</span>}
+                  </div>
+                ) : (
+                  <>
+                    <div className="time">{t.time || "—"} · {statusLabel}{hasOverlap && !isFinished ? " · ⚠️ overlap" : ""}</div>
+                    <div className="title">{t.title}</div>
+                    {sub && <div className="sub-tag-chip" style={{ background: sub.color, color: contrastText(sub.color) }}>{sub.icon} {sub.title}</div>}
+                  </>
+                )}
                 {spillsOver && (
                   <div className="spill-badge">↷ continues {overflowMinutes}m into tomorrow</div>
                 )}

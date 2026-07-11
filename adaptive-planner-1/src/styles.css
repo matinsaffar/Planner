@@ -265,7 +265,7 @@ body.has-user-bg::before{
 .timeline-scroll{flex:1;overflow-y:auto;position:relative;border-left:2px solid var(--border);margin-left:8px;padding-left:16px;}
 .resize-handle{height:14px;display:flex;align-items:center;justify-content:center;cursor:row-resize;}
 .resize-handle .bar{width:60px;height:4px;border-radius:2px;background:var(--border);}
-.unstarted-panel{overflow-y:auto;}
+.unstarted-panel{overflow-y:auto;min-height:150px;scroll-padding-bottom:14px;}
 .timeline.drop-active{background:rgba(125,211,192,.08);border-radius:8px;}
 .tl-item{position:relative;padding:4px 10px;border-radius:12px;
   background:linear-gradient(155deg, var(--glass-strong) 0%, var(--glass) 70%);
@@ -276,6 +276,15 @@ body.has-user-bg::before{
 .tl-item .time{font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tl-item .title{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;}
 .tl-item .sub-tag-chip{font-size:10px;padding:1px 6px;margin-top:1px;display:inline-block;max-width:fit-content;}
+/* Short tasks (roughly under ~52 real minutes at the current hour scale)
+   collapse to one row — time + title side by side — instead of the normal
+   time/title/chip stack, so the title never gets clipped by the card's
+   own height. */
+.tl-item.compact{padding:3px 10px;justify-content:center;}
+.tl-compact-row{position:relative;z-index:2;display:flex;align-items:baseline;gap:6px;width:100%;min-width:0;}
+.tl-compact-row .time{flex:0 0 auto;font-size:10px;color:var(--muted);white-space:nowrap;}
+.tl-compact-row .title{flex:1 1 auto;min-width:0;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tl-item.custom-color .tl-compact-row .time{color:rgba(255,255,255,.85);}
 .tl-item:hover{transform:translateY(-1px);}
 .tl-item::before{content:'';position:absolute;left:-22px;top:16px;width:8px;height:8px;
   border-radius:50%;background:var(--accent);}
@@ -290,7 +299,7 @@ body.has-user-bg::before{
   background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.02) 60%);
   mix-blend-mode:overlay;z-index:0;}
 .tl-item.custom-color .time, .tl-item.custom-color .title{position:relative;z-index:1;}
-.unstarted-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.unstarted-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding-bottom:10px;}
 .focus-screen{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
   color:var(--ink);text-align:center;padding:20px;
   background:radial-gradient(circle at 50% 20%, rgba(125,211,192,.15), transparent 60%),var(--bg);}
@@ -717,7 +726,7 @@ button.mini-btn[style*="position: absolute"], button.mini-btn[style*="position:a
 }
 .tl-now-line{position:absolute;left:0;right:0;height:0;pointer-events:none;z-index:4;
   border-top:2px solid var(--danger);box-shadow:0 0 8px rgba(239,100,97,.6);}
-.tl-now-line::before{content:"now";position:absolute;left:6px;top:-9px;font-size:9px;font-weight:800;
+.tl-now-line::before{content:"now";position:absolute;left:6px;top:-15px;font-size:9px;font-weight:800;
   letter-spacing:.5px;text-transform:uppercase;color:#fff;background:var(--danger);
   padding:1px 6px;border-radius:6px;}
 

@@ -284,9 +284,11 @@ export default function App() {
   }
   async function delayTask(task: any, newDate: string) {
     await saveTask({ ...task, date: newDate, status: "Delayed" }); setDetailTask(null);
+    if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
   }
   async function cancelTask(task: any) {
     await updateRow("tasks", task.id, { status: "Cancelled" }); await reloadAll(); setDetailTask(null);
+    if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
   }
 
   function findOverlap(taskId: string, hour: number, minute: number, date: string, durationOverride?: number): { type: "task" | "block" | "reminder"; item: any } | null {
