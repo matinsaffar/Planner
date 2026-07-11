@@ -23,6 +23,23 @@ function fmtHour(h: number) {
   return String(h % 24).padStart(2, "0") + ":00";
 }
 
+// Minutes-of-day in Asia/Tehran regardless of the device's local timezone.
+// Uses Intl to read hour/minute in Tehran, then converts to 0..1439.
+function tehranMinutes(): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(new Date());
+    const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+    const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+    return h * 60 + m;
+  } catch {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+}
+
+
 export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = [], subInfo, onOpenTask, onDropTask, onReplaceConflict, onEditBlock, onDeleteBlock, cardOpacity = 1 }: Props) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -34,9 +51,16 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragStateRef = useRef<{ startY: number; startPct: number } | null>(null);
 
-  // Prevent iOS/Safari (and any browser) from navigating when a drag payload
-  // (task UUID as text/plain) is dropped outside the timeline. Without this,
-  // Safari treats the string as a URL and redirects to a broken page.
+  // === Real-time clock in Asia/Tehran, minute-of-day (0..1439). Ticks every
+  // 15 s so the sand overlay grows visibly without wasted renders. ===
+  const [nowMinTehran, setNowMinTehran] = useState<number>(() => tehranMinutes());
+  useEffect(() => {
+    const id = setInterval(() => setNowMinTehran(tehranMinutes()), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Prevent iOS/Safari from navigating when a drag payload (task UUID)
+  // is dropped outside the timeline.
   useEffect(() => {
     const stop = (e: DragEvent) => { e.preventDefault(); };
     window.addEventListener("dragover", stop);
@@ -46,6 +70,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
       window.removeEventListener("drop", stop);
     };
   }, []);
+
 
 
   function yToTime(clientY: number) {
@@ -237,11 +262,29 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
             const spillsOver = top + height > totalHeight;
             const visibleHeight = spillsOver ? Math.max(20, totalHeight - top) : height;
             const overflowMinutes = spillsOver ? Math.round(((top + height) - totalHeight) / (HOUR_HEIGHT / 60)) : 0;
+
+            // === Sand-clock progress (Tehran time). Compute task start/end in
+            // minutes-of-day and clamp against nowMinTehran to derive percent
+            // passed. Finished tasks aren't overridden by this. ===
+            let taskStartMin = 0, taskEndMin = 0;
+            if (t.time) {
+              const [th, tm] = t.time.split(":").map(Number);
+              taskStartMin = th * 60 + tm;
+            } else if (t.started_at) {
+              const d = new Date(t.started_at);
+              taskStartMin = d.getHours() * 60 + d.getMinutes();
+            }
+            taskEndMin = taskStartMin + (t.duration || 30);
+            const passedMin = Math.max(0, Math.min(taskEndMin - taskStartMin, nowMinTehran - taskStartMin));
+            const progressPct = taskEndMin > taskStartMin ? (passedMin / (taskEndMin - taskStartMin)) * 100 : 0;
+            const isPast = !isFinished && nowMinTehran >= taskEndMin;
+            const isInProgress = !isFinished && nowMinTehran >= taskStartMin && nowMinTehran < taskEndMin;
+
             return (
               <div key={t.id} draggable={!isFinished}
-                className={"tl-item" + (hasOverlap && !isFinished ? " overlap" : "") + (isFinished ? " finished" : "") + (bg ? " custom-color" : "")}
+                className={"tl-item" + (hasOverlap && !isFinished ? " overlap" : "") + (isFinished ? " finished" : "") + (bg ? " custom-color" : "") + (isPast ? " past" : "") + (isInProgress ? " in-progress" : "")}
                 style={{ position: "absolute", top, left: 8, right: 8, height: visibleHeight,
-                  background: bg || "var(--glass)", cursor: isFinished ? "pointer" : "grab", zIndex: isFinished ? 1 : 2,
+                  background: bg || undefined, cursor: isFinished ? "pointer" : "grab", zIndex: isFinished ? 1 : 2,
                   outline: hasOverlap && !isFinished ? "2px solid var(--danger)" : "none", opacity: cardOpacity }}
                 onDragStart={(e) => {
                   if (isFinished) return;
@@ -251,6 +294,9 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
                   sound.drag();
                 }}
                 onClick={() => onOpenTask(t)}>
+                {(isInProgress || isPast) && !isFinished && (
+                  <div className="tl-progress-overlay" style={{ height: `${Math.min(100, progressPct)}%` }} />
+                )}
                 <div className="time">{t.time || "—"} · {statusLabel}{hasOverlap && !isFinished ? " · ⚠️ overlap" : ""}</div>
                 <div className="title">{t.title}</div>
                 {sub && <div className="sub-tag-chip" style={{ background: sub.color, color: contrastText(sub.color) }}>{sub.icon} {sub.title}</div>}
