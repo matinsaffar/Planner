@@ -20,6 +20,8 @@ import EndOfDayReview from "./EndOfDayReview";
 import GoalFlow from "./GoalFlow";
 import { contrastText } from "./colorUtils";
 import FocusMode from "./FocusMode";
+import FocusDrawer from "./FocusDrawer";
+import { FocusSession, getActiveFocusSession, startFocusSession, subscribeFocusSession, setFocusMinimized, endFocusSession } from "./focusSession";
 import SearchOverlay from "./SearchOverlay";
 import EmptyState from "./EmptyState";
 import BadgePicker from "./BadgePicker";
@@ -60,7 +62,7 @@ export default function App() {
   const [editTask, setEditTask] = useState<any>(null);
   const [editReminder, setEditReminder] = useState<any>(null);
   const [reviewTasks, setReviewTasks] = useState<any[]>([]);
-  const [focusTask, setFocusTask] = useState<any>(null);
+  const [focusSession, setFocusSession] = useState<FocusSession | null>(null);
   const [openSub, setOpenSub] = useState<{ cat: any; sub: any } | null>(null);
   const [showGoalFlow, setShowGoalFlow] = useState(false);
   const [presetCatSub, setPresetCatSub] = useState<{ cat: string; sub: string } | null>(null);
@@ -122,6 +124,20 @@ export default function App() {
       if (pending.length > 0) setReviewTasks(pending);
       setReady(true);
     })();
+  }, []);
+
+  // Cross-device focus sessions: restore whatever's already running (e.g. you
+  // started a task on your phone), then stay live-synced via Realtime so
+  // pause/extend/minimize/finish on any device reflect everywhere within
+  // ~200ms. See focusSession.ts for the underlying `focus_sessions` table.
+  useEffect(() => {
+    let unsubscribe = () => {};
+    (async () => {
+      const existing = await getActiveFocusSession().catch(() => null);
+      if (existing) setFocusSession(existing);
+      unsubscribe = subscribeFocusSession((s) => setFocusSession(s));
+    })();
+    return () => unsubscribe();
   }, []);
 
   function toggleMute() { const next = !muted; setMuted(next); setMutedState(next); }
@@ -247,12 +263,13 @@ export default function App() {
     await saveTask(started);
     sound.start();
     setDetailTask(null);
-    setFocusTask(started);
+    const session = await startFocusSession(started);
+    if (session) setFocusSession(session); // optimistic; Realtime confirms + syncs other devices
   }
   async function finishFocus(task: any) {
     await saveTask({ ...task, status: "Finished", finished_at: Date.now() });
     sound.finish();
-    setFocusTask(null);
+    if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
     setDetailTask(null);
   }
   async function breakFocus(task: any, remainingMinutes: number) {
@@ -262,7 +279,8 @@ export default function App() {
         subcategory: task.subcategory, duration: remainingMinutes, date: todayStr(0), time: null,
         status: "Planned", notes: task.notes, subtasks: [], goals: task.goals });
     }
-    sound.break(); setFocusTask(null);
+    sound.break();
+    if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
   }
   async function delayTask(task: any, newDate: string) {
     await saveTask({ ...task, date: newDate, status: "Delayed" }); setDetailTask(null);
@@ -392,8 +410,14 @@ export default function App() {
       {reviewTasks.length > 0 && (
         <EndOfDayReview tasks={reviewTasks} onResolve={resolveReview} onClose={() => setReviewTasks([])} />
       )}
-      {focusTask && (
-        <FocusMode task={focusTask} onFinish={finishFocus} onBreak={breakFocus} onClose={() => setFocusTask(null)} />
+      {focusSession && !focusSession.minimized && (
+        <FocusMode session={focusSession} onFinish={finishFocus} onBreak={breakFocus} />
+      )}
+      {focusSession && focusSession.minimized && (
+        <FocusDrawer
+          session={focusSession}
+          onRestore={async () => { const updated = await setFocusMinimized(false); if (updated) setFocusSession(updated); }}
+        />
       )}
 
       <div className="app-header">
@@ -464,7 +488,7 @@ export default function App() {
             <h2>Categories</h2>
             <div className="cat-grid">
               {categories.slice(0, 6).map((c: any) => (
-                <div key={c.id} className="cat-card" onClick={() => setTab("categories")}>
+                <div key={c.id} className={"cat-card" + (c.banner ? " has-banner" : "")} onClick={() => setTab("categories")}>
                   {c.banner ? <div className="cat-banner" style={{ backgroundImage: `url(${c.banner})` }} /> : <div className="cat-banner" style={{ background: c.color }} />}
                   <div className="cat-body"><div className="icon">{c.icon}</div><div className="name">{c.name}</div></div>
                 </div>

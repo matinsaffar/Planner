@@ -200,6 +200,27 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
           onDrop={handleDrop}
           style={{ position: "relative", height: hourMarks.length * HOUR_HEIGHT }}
         >
+          {/* Hours fully before "now" read as dimmed/desaturated; hours still
+              ahead get a faint accent wash instead so the two zones contrast
+              clearly. Heights are derived straight from nowMinTehran, so
+              both bands advance every tick without extra state. */}
+          {(() => {
+            const totalPx = (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT;
+            const pastPx = Math.max(0, Math.min(totalPx, (nowMinTehran - START_HOUR * 60) * (HOUR_HEIGHT / 60)));
+            return (
+              <>
+                {pastPx > 0 && <div className="tl-hour-band past" style={{ top: 0, height: pastPx }} />}
+                {pastPx < totalPx && <div className="tl-hour-band future" style={{ top: pastPx, height: totalPx - pastPx }} />}
+              </>
+            );
+          })()}
+          <div
+            className="tl-now-line"
+            style={{ top: Math.max(0, Math.min(
+              (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT,
+              (nowMinTehran - START_HOUR * 60) * (HOUR_HEIGHT / 60)
+            )) }}
+          />
           {hourMarks.map((h) => (
             <div key={h} style={{ position: "absolute", top: (h - START_HOUR) * HOUR_HEIGHT, left: 0, right: 0,
               borderTop: "1px solid var(--border)", pointerEvents: "none", zIndex: 0 }}>
@@ -295,7 +316,9 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
                 }}
                 onClick={() => onOpenTask(t)}>
                 {(isInProgress || isPast) && !isFinished && (
-                  <div className="tl-progress-overlay" style={{ height: `${Math.min(100, progressPct)}%` }} />
+                  <div className="tl-progress-overlay" style={{ height: `${Math.min(100, progressPct)}%` }}>
+                    <div className="grain" />
+                  </div>
                 )}
                 <div className="time">{t.time || "—"} · {statusLabel}{hasOverlap && !isFinished ? " · ⚠️ overlap" : ""}</div>
                 <div className="title">{t.title}</div>

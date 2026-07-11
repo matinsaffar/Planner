@@ -1,41 +1,63 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { sound } from "./sound";
+import {
+  FocusSession,
+  computeElapsedSeconds,
+  togglePauseFocusSession,
+  extendFocusSession,
+  setFocusMinimized,
+  endFocusSession,
+} from "./focusSession";
 
 interface Props {
-  task: any;
+  session: FocusSession;
   onFinish: (task: any) => void;
   onBreak: (task: any, remainingMinutes: number) => void;
-  onClose: () => void;
 }
 
-export default function FocusMode({ task, onFinish, onBreak, onClose }: Props) {
-  const [totalSeconds, setTotalSeconds] = useState((task.duration || 30) * 60);
-  const [elapsed, setElapsed] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const intervalRef = useRef<any>(null);
-
+// Full-screen focus timer. Unlike the old version, this never owns the
+// clock itself — `session` is the shared row from `focus_sessions`, kept in
+// sync across every device via Realtime (see App.tsx + focusSession.ts).
+// This component just re-renders once a second and re-derives elapsed time
+// from the session's timestamps, and writes user actions (pause, extend,
+// minimize) back to that row so every other open device sees them too.
+export default function FocusMode({ session, onFinish, onBreak }: Props) {
+  const [, setTick] = useState(0);
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      if (!paused) setElapsed((e) => e + 1);
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, [paused]);
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const remaining = Math.max(0, totalSeconds - elapsed);
+  const task = session.task_snapshot;
+  const elapsed = computeElapsedSeconds(session);
+  const remaining = Math.max(0, session.total_seconds - elapsed);
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
   const remainingMinutes = Math.ceil(remaining / 60);
-  const pct = Math.min(100, (elapsed / totalSeconds) * 100);
+  const pct = Math.min(100, (elapsed / session.total_seconds) * 100);
   const isOvertime = remaining === 0;
 
-  function togglePause() { setPaused((p) => !p); sound.pause(); }
-  function extend(minutes: number) { setTotalSeconds((s) => s + minutes * 60); sound.step(); }
+  async function togglePause() { sound.pause(); await togglePauseFocusSession(session); }
+  async function extend(minutes: number) { sound.step(); await extendFocusSession(session, minutes); }
+  async function minimize() { await setFocusMinimized(true); }
+
+  async function finish() {
+    await endFocusSession();
+    onFinish(task);
+  }
+  async function takeBreak() {
+    await endFocusSession();
+    onBreak(task, remainingMinutes);
+  }
 
   return (
     <div className="focus-screen">
-      <button className="close-x" onClick={onClose}>×</button>
+      {/* Closing no longer discards the session — it just docks it as a
+          drawer at the bottom (see FocusDrawer + App.tsx). The timer keeps
+          running underneath, on this device and any other open one. */}
+      <button className="close-x" onClick={minimize} aria-label="Minimize focus session">×</button>
       <h2>{task.title}</h2>
-      <p style={{ color: "var(--muted)", fontSize: 13 }}>Focus mode · {Math.round(totalSeconds / 60)} min planned</p>
+      <p style={{ color: "var(--muted)", fontSize: 13 }}>Focus mode · {Math.round(session.total_seconds / 60)} min planned</p>
       <div className="focus-time" style={isOvertime ? { color: "var(--danger)" } : {}}>{mm}:{ss}</div>
       <div style={{ width: 240, height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden", marginBottom: 18 }}>
         <div style={{ width: `${pct}%`, height: "100%", background: isOvertime ? "var(--danger)" : "linear-gradient(90deg,var(--accent),var(--accent2))", transition: "width 1s linear" }} />
@@ -48,11 +70,11 @@ export default function FocusMode({ task, onFinish, onBreak, onClose }: Props) {
       </div>
 
       <div className="split-btn">
-        <div className="fin" onClick={() => onFinish(task)}>FINISH</div>
-        <div className="pp" onClick={togglePause}>{paused ? "RESUME" : "PAUSE"}</div>
+        <div className="fin" onClick={finish}>FINISH</div>
+        <div className="pp" onClick={togglePause}>{session.paused ? "RESUME" : "PAUSE"}</div>
       </div>
       <div className="mini-row">
-        <button className="mini-btn" onClick={() => onBreak(task, remainingMinutes)}>Break task here</button>
+        <button className="mini-btn" onClick={takeBreak}>Break task here</button>
       </div>
     </div>
   );
