@@ -5,6 +5,8 @@ import { formatJalaali } from "./jalaali";
 import JalaaliPicker from "./JalaaliPicker";
 import TimeOfDayPicker from "./TimeOfDayPicker";
 import TitleSuggestInput from "./TitleSuggestInput";
+import WeeklySlotsPicker, { WeeklySlot } from "./WeeklySlotsPicker";
+import { todayStr } from "./seed";
 
 function addMinutes(time: string, minutes: number) {
   const [h, m] = time.split(":").map(Number);
@@ -25,10 +27,19 @@ export default function BlockFlow({ onSave, onClose, defaultDate, allBlocks = []
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("10:00");
   const [repeat, setRepeat] = useState("none");
+  const [repeatSlots, setRepeatSlots] = useState<WeeklySlot[]>([]);
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
   const [conflictMsg, setConflictMsg] = useState("");
   const [conflictObj, setConflictObj] = useState<any>(null);
 
+  const isCustomWeekly = repeat === "custom";
+
   function handleSave() {
+    if (isCustomWeekly) {
+      onSave({ id: uid(), title, date: date || todayStr(0), repeat: "custom", repeat_slots: repeatSlots, repeat_weeks: repeatWeeks });
+      sound.save();
+      return;
+    }
     if (checkTimeConflict) {
       const conflict = checkTimeConflict(date, start, end);
       if (conflict) {
@@ -65,17 +76,31 @@ export default function BlockFlow({ onSave, onClose, defaultDate, allBlocks = []
               history={history}
               onPickDuration={(d: number) => setEnd(addMinutes(start, d))}
             /></div>
-          <div className="field"><label>Day ({formatJalaali(date)})</label>
-            <JalaaliPicker value={date} onChange={setDate} disablePast /></div>
-          <div className="field"><label>Start</label>
-            <TimeOfDayPicker value={start} onChange={setStart} /></div>
-          <div className="field"><label>End</label>
-            <TimeOfDayPicker value={end} onChange={setEnd} /></div>
           <div className="field"><label>Repeat</label>
-            <select value={repeat} onChange={(e) => setRepeat(e.target.value)}>
-              <option value="none">Does not repeat</option>
-              <option value="weekly">Weekly</option>
-            </select></div>
+            <div className="notify-options">
+              <button type="button" className={"notify-chip" + (repeat === "none" ? " active" : "")} onClick={() => setRepeat("none")}>Doesn't repeat</button>
+              <button type="button" className={"notify-chip" + (repeat === "weekly" ? " active" : "")} onClick={() => setRepeat("weekly")}>Weekly</button>
+              <button type="button" className={"notify-chip" + (repeat === "custom" ? " active" : "")} onClick={() => setRepeat("custom")}>Specific weekdays…</button>
+            </div>
+          </div>
+          {isCustomWeekly ? (
+            <div className="field">
+              <label>Days &amp; times</label>
+              <p style={{ fontSize: 12, color: "var(--muted)", marginTop: -2, marginBottom: 10 }}>
+                e.g. a class held Saturdays 9:00–10:30 and Mondays 7:45–9:15 — add each day separately, they can have completely different times.
+              </p>
+              <WeeklySlotsPicker slots={repeatSlots} onChange={setRepeatSlots} weeks={repeatWeeks} onWeeksChange={setRepeatWeeks} />
+            </div>
+          ) : (
+            <>
+              <div className="field"><label>Day ({formatJalaali(date)})</label>
+                <JalaaliPicker value={date} onChange={setDate} disablePast /></div>
+              <div className="field"><label>Start</label>
+                <TimeOfDayPicker value={start} onChange={setStart} /></div>
+              <div className="field"><label>End</label>
+                <TimeOfDayPicker value={end} onChange={setEnd} /></div>
+            </>
+          )}
           {conflictObj && (
             <div className="conflict-preview" style={{ margin: "8px 0" }}>
               <span className="conflict-preview-title">⚠ Overlaps with "{conflictObj.item.title}"</span>
@@ -88,7 +113,7 @@ export default function BlockFlow({ onSave, onClose, defaultDate, allBlocks = []
           {conflictMsg && <p style={{ fontSize: 12, color: "#ef6461", fontWeight: 700 }}>⚠ {conflictMsg}</p>}
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" disabled={!title} onClick={handleSave}>Save</button>
+            <button className="btn btn-primary" disabled={!title || (isCustomWeekly && repeatSlots.length === 0)} onClick={handleSave}>Save</button>
           </div>
         </div>
       </div>

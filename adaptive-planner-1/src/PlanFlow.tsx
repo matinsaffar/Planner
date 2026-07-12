@@ -9,6 +9,7 @@ import TimeOfDayPicker from "./TimeOfDayPicker";
 import TitleSuggestInput from "./TitleSuggestInput";
 import NotifyPicker from "./NotifyPicker";
 import { NotifyOffset } from "./notifications";
+import WeeklySlotsPicker, { WeeklySlot } from "./WeeklySlotsPicker";
 
 const PALETTE_TASK = ["#7dd3c0", "#a78bfa", "#f4a261", "#ef6461", "#4f9d69", "#e8a4c9", "#5b8bd6", "#c9a24b"];
 const REPEAT_OPTIONS = [
@@ -16,6 +17,7 @@ const REPEAT_OPTIONS = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "weekdays", label: "Weekdays" },
+  { value: "custom", label: "Specific weekdays…" },
 ];
 
 export default function PlanFlow({ categories, subcategories, goals, allTasks = [], addCategory, addSubcategory, onSave, onClose, defaultDate, presetCategory, presetSubcategory, checkTimeConflict, onReplaceAndContinue }: any) {
@@ -39,6 +41,8 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
   const [conflictMsg, setConflictMsg] = useState("");
   const [conflictObj, setConflictObj] = useState<any>(null);
   const [repeat, setRepeat] = useState<string>("none");
+  const [repeatSlots, setRepeatSlots] = useState<WeeklySlot[]>([]);
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
   const [notify, setNotify] = useState<NotifyOffset>("15min");
   const [notifyCustomTime, setNotifyCustomTime] = useState("09:00");
 
@@ -68,7 +72,9 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
     onSave({
       id: uid(), title, category, subcategory, duration, date, time: time || null,
       status: "Planned", subtasks, goals: linkedGoals, notes: "", color: customColor,
-      repeat, notify, notifyCustomTime
+      repeat, repeat_slots: repeat === "custom" ? repeatSlots : null,
+      repeat_weeks: repeat === "custom" ? repeatWeeks : null,
+      notify, notifyCustomTime
     });
     sound.save();
   }
@@ -241,10 +247,19 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
                   ))}
                 </div>
               </div>
+              {repeat === "custom" && (
+                <div className="field">
+                  <label>Days &amp; times</label>
+                  <p style={{ fontSize: 12, color: "var(--muted)", marginTop: -2, marginBottom: 10 }}>
+                    e.g. a class held Saturdays 9:00–10:30 and Mondays 7:45–9:15 — add each day separately, they can have completely different times.
+                  </p>
+                  <WeeklySlotsPicker slots={repeatSlots} onChange={setRepeatSlots} weeks={repeatWeeks} onWeeksChange={setRepeatWeeks} />
+                </div>
+              )}
               <NotifyPicker value={notify} onChange={setNotify} customTime={notifyCustomTime} onCustomTimeChange={setNotifyCustomTime} />
               <div className="btn-row">
                 <button className="btn btn-ghost" onClick={back}>Back</button>
-                <button className="btn btn-primary" onClick={next}>Continue</button>
+                <button className="btn btn-primary" disabled={repeat === "custom" && repeatSlots.length === 0} onClick={next}>Continue</button>
               </div>
             </div>
           )}
@@ -327,7 +342,9 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
                   {catObj?.name} · {subObj?.title} · {Math.floor(duration / 60)}h {duration % 60}m<br/>
                   {formatJalaali(date)} {time && `at ${time}`}<br/>
                   {subtasks.length} subtask{subtasks.length === 1 ? "" : "s"} · {linkedGoals.length} goal link{linkedGoals.length === 1 ? "" : "s"}<br/>
-                  {repeat !== "none" ? `Repeats ${repeat}` : "One-time"} · {notify !== "none" ? "Notification on" : "No notification"}
+                  {repeat === "custom"
+                    ? `${repeatSlots.length} day${repeatSlots.length === 1 ? "" : "s"}/week × ${repeatWeeks} week${repeatWeeks === 1 ? "" : "s"}`
+                    : repeat !== "none" ? `Repeats ${repeat}` : "One-time"} · {notify !== "none" ? "Notification on" : "No notification"}
                 </p>
               </div>
               <div className="btn-row">

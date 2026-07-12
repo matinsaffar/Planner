@@ -4,7 +4,7 @@ import { seedIfEmpty, todayStr, daysUntil } from "./seed";
 import { supabase } from "./supabaseClient";
 import { sound, setMuted, isMuted } from "./sound";
 import { useTheme } from "./theme";
-import { formatJalaali } from "./jalaali";
+import { formatJalaali, weeklyOccurrences } from "./jalaali";
 import AccentPicker from "./AccentPicker";
 import CategoryManager from "./CategoryManager";
 import SubcategoryDetail from "./SubcategoryDetail";
@@ -145,7 +145,7 @@ export default function App() {
     (async () => {
       const existing = await getActiveFocusSession().catch(() => null);
       if (existing) setFocusSession(existing);
-      unsubscribe = subscribeFocusSession((s) => setFocusSession(s));
+      unsubscribe = subscribeFocusSession((s) => { setFocusSession(s); reloadAll(); });
     })();
     return () => unsubscribe();
   }, []);
@@ -156,6 +156,7 @@ export default function App() {
 
   async function saveTask(t: any) {
     const existsLocally = tasks.some((x) => x.id === t.id);
+    const isCustomWeekly = t.repeat === "custom" && t.repeat_slots?.length > 0;
     const payload = {
       id: t.id, title: t.title, category: t.category, subcategory: t.subcategory,
       duration: t.duration, date: t.date, time: t.time, status: t.status, notes: t.notes || "",
@@ -163,19 +164,51 @@ export default function App() {
       created_at: t.created_at || Date.now(), started_at: t.started_at || null, finished_at: t.finished_at || null,
       repeat: t.repeat || "none", notify: t.notify || "none", notify_custom_time: t.notifyCustomTime || null,
     };
-    if (existsLocally) await updateRow("tasks", t.id, payload);
-    else await insertRow("tasks", payload);
+    // Custom weekly slots ARE the occurrences (e.g. Sat 9:00 + Mon 7:45,
+    // 16 weeks) — the wizard's own single date/time is just scratch state
+    // from earlier steps, not a real task of its own, so skip inserting it.
+    if (!isCustomWeekly) {
+      if (existsLocally) await updateRow("tasks", t.id, payload);
+      else await insertRow("tasks", payload);
+    }
 
-    if (payload.notify !== "none" && payload.date) {
+    if (!isCustomWeekly && payload.notify !== "none" && payload.date) {
       const fireAt = computeNotifyTime(payload.date, payload.time, payload.notify, payload.notify_custom_time);
       if (fireAt) scheduleNotification("task_" + t.id, payload.title, "Task scheduled: " + payload.title, fireAt);
     }
 
     if (t.repeat && t.repeat !== "none" && !existsLocally) {
-      await generateRepeatInstances(t, payload);
+      if (isCustomWeekly) await generateCustomWeeklyInstances(t, payload);
+      else await generateRepeatInstances(t, payload);
     }
 
     await reloadAll();
+  }
+
+  // A "custom" repeat is one or more (weekday, start, end) slots — e.g. a
+  // semester class held Saturdays 9:00–10:30 AND Mondays 7:45–9:15 — each
+  // repeating weekly for the chosen number of weeks. The task created by
+  // the wizard's own date/time becomes just the template for title,
+  // category, subtasks, etc.; every actual occurrence comes from the slots.
+  async function generateCustomWeeklyInstances(original: any, basePayload: any) {
+    const anchor = original.date || todayStr(0);
+    for (const slot of original.repeat_slots) {
+      const [sh, sm] = slot.startTime.split(":").map(Number);
+      const [eh, em] = slot.endTime.split(":").map(Number);
+      const slotDuration = Math.max(5, (eh * 60 + em) - (sh * 60 + sm));
+      const dates = weeklyOccurrences(anchor, slot.weekday, original.repeat_weeks || 1);
+      for (const dateStr of dates) {
+        const instancePayload = {
+          ...basePayload, id: uid(), date: dateStr, time: slot.startTime, duration: slotDuration,
+          status: "Planned", started_at: null, finished_at: null,
+        };
+        await insertRow("tasks", instancePayload);
+        if (instancePayload.notify !== "none") {
+          const fireAt = computeNotifyTime(dateStr, instancePayload.time, instancePayload.notify, instancePayload.notify_custom_time);
+          if (fireAt) scheduleNotification("task_" + instancePayload.id, instancePayload.title, "Task scheduled: " + instancePayload.title, fireAt);
+        }
+      }
+    }
   }
 
   async function generateRepeatInstances(original: any, basePayload: any) {
@@ -217,7 +250,17 @@ export default function App() {
   async function deleteReminder(id: string) { await updateRow("reminders", id, { hidden: true }); await reloadAll(); }
 
   async function saveBlock(b: any) {
-    await insertRow("blocks", { id: b.id, title: b.title, date: b.date, start_time: b.start, end_time: b.end, repeat: b.repeat });
+    if (b.repeat === "custom" && b.repeat_slots?.length > 0) {
+      const anchor = b.date || todayStr(0);
+      for (const slot of b.repeat_slots) {
+        const dates = weeklyOccurrences(anchor, slot.weekday, b.repeat_weeks || 1);
+        for (const dateStr of dates) {
+          await insertRow("blocks", { id: uid(), title: b.title, date: dateStr, start_time: slot.startTime, end_time: slot.endTime, repeat: "custom" });
+        }
+      }
+    } else {
+      await insertRow("blocks", { id: b.id, title: b.title, date: b.date, start_time: b.start, end_time: b.end, repeat: b.repeat });
+    }
     await reloadAll();
   }
   async function updateBlock(b: any) {
@@ -314,6 +357,15 @@ export default function App() {
       if (updated) setFocusSession(updated);
     }
     if (detailTask && detailTask.id === taskId) setDetailTask({ ...detailTask, subtasks: updatedSubtasks });
+  }
+  async function savePushSubscription(row: { endpoint: string; keys_p256dh: string; keys_auth: string }) {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return;
+    const { error } = await supabase.from("push_subscriptions").upsert(
+      { user_id: data.user.id, endpoint: row.endpoint, keys_p256dh: row.keys_p256dh, keys_auth: row.keys_auth, updated_at: Date.now() },
+      { onConflict: "endpoint" }
+    );
+    if (error) console.error(error);
   }
   async function cancelTask(task: any) {
     await updateRow("tasks", task.id, { status: "Cancelled" }); await reloadAll(); setDetailTask(null);
@@ -650,6 +702,7 @@ export default function App() {
           onImportData={handleImportBackup}
           cardOpacity={cardOpacity} setCardOpacity={setCardOpacity}
           nowLineColor={nowLineColor} setNowLineColor={setNowLineColor}
+          onPushSubscribed={savePushSubscription}
         />
       )}
 

@@ -277,6 +277,16 @@ body.has-user-bg::before{
 .tl-item .time{font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tl-item .title{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;}
 .tl-item .sub-tag-chip{font-size:10px;padding:1px 6px;margin-top:1px;display:inline-block;max-width:fit-content;}
+/* Marks where the task would have ended before a Focus Mode extension
+   (+15/+30/+45) pushed it further — a dashed line at the original
+   end-time with a small "+Nm" badge, so the extra time reads as an
+   addition rather than silently changing the card's shape. */
+.tl-extend-marker{position:absolute;left:0;right:0;height:0;z-index:2;pointer-events:none;
+  border-top:1.5px dashed rgba(255,255,255,.55);}
+.tl-extend-badge{position:absolute;right:6px;top:-9px;font-size:9px;font-weight:800;color:#0d1117;
+  background:var(--accent-warm);padding:1px 6px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.compact-extend-badge{flex:0 0 auto;font-size:9px;font-weight:800;color:#0d1117;background:var(--accent-warm);
+  padding:1px 5px;border-radius:5px;}
 /* Short tasks (roughly under ~52 real minutes at the current hour scale)
    collapse to one row — time + title side by side — instead of the normal
    time/title/chip stack, so the title never gets clipped by the card's
@@ -348,6 +358,24 @@ input[type="datetime-local"]::-webkit-date-and-time-value{
   background:var(--glass);color:var(--muted);cursor:pointer;}
 .cal-toggle button.active{background:var(--accent);color:#0d1117;font-weight:700;}
 .jalaali-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:8px;width:100%;}
+.jalaali-weekday-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:4px;}
+.jalaali-weekday-label{text-align:center;font-size:10px;font-weight:700;letter-spacing:.4px;
+  text-transform:uppercase;color:var(--muted);padding:2px 0;}
+.jalaali-cell.blank{cursor:default;pointer-events:none;visibility:hidden;}
+
+/* ==== Weekly slots picker (class-schedule-style recurrence) ==== */
+.weekly-slots-picker{display:flex;flex-direction:column;}
+.weekly-slot-row{border:1px solid var(--border);border-radius:14px;padding:10px;margin-bottom:8px;
+  background:var(--glass);}
+.weekday-chip-row{display:flex;gap:4px;margin-bottom:8px;}
+.weekday-chip{flex:1;padding:6px 0;font-size:11px;font-weight:700;border-radius:8px;border:1px solid var(--border);
+  background:var(--glass-strong);color:var(--muted);cursor:pointer;transition:.15s;}
+.weekday-chip.active{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#0d1117;border-color:transparent;}
+.weekly-slot-times{display:flex;align-items:center;gap:8px;}
+.weekly-slot-times input[type="time"]{flex:1;min-width:0;padding:8px;border-radius:8px;border:1px solid var(--border);
+  background:var(--glass-strong);color:var(--ink);font-size:13px;}
+.weekly-slot-dash{color:var(--muted);}
+.weekly-slot-remove{flex:0 0 auto;color:var(--danger);}
 .jalaali-cell{text-align:center;padding:10px 0;font-size:13px;border-radius:10px;cursor:pointer;
   background:var(--glass-strong);color:var(--ink);border:1px solid var(--border);
   transition:transform .12s,background .12s;}

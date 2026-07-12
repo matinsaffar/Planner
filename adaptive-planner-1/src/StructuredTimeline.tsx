@@ -274,10 +274,20 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
           {tasksWithTime.map((t: any) => {
             const sub = subInfo(t.category, t.subcategory);
             const top = timeToOffset(t.time, t.started_at);
-            const height = Math.max(38, (t.duration || 30) * (HOUR_HEIGHT / 60));
+            // Extending the timer in Focus Mode (+15/+30/+45) grows the
+            // task's real end time — reflect that on the timeline instead
+            // of leaving the card sized to the original plan.
+            const extendedMinutes = t.extended_minutes || 0;
+            const baseDuration = t.duration || 30;
+            const effectiveDuration = baseDuration + extendedMinutes;
+            const height = Math.max(38, effectiveDuration * (HOUR_HEIGHT / 60));
+            const baseHeight = Math.max(20, baseDuration * (HOUR_HEIGHT / 60));
             const hasOverlap = tasksWithTime.some((o: any) => o.id !== t.id && overlaps(t, o));
-            const isFinished = t.status === "Finished";
-            const statusLabel = t.status === "In Progress" ? "In progress" : isFinished ? "✓ Finished" : t.time ? "Scheduled" : "Dropped";
+            // "Broken" (task was interrupted mid-focus and the remainder
+            // spun off into a new "(continued)" task) reads the same as
+            // Finished here — it's over, no more sand/in-progress glow.
+            const isFinished = t.status === "Finished" || t.status === "Broken";
+            const statusLabel = t.status === "In Progress" ? "In progress" : t.status === "Broken" ? "Broken off" : isFinished ? "✓ Finished" : t.time ? "Scheduled" : "Dropped";
             const bg = t.color || null;
             const totalHeight = (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT;
             const spillsOver = top + height > totalHeight;
@@ -295,7 +305,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
               const d = new Date(t.started_at);
               taskStartMin = d.getHours() * 60 + d.getMinutes();
             }
-            taskEndMin = taskStartMin + (t.duration || 30);
+            taskEndMin = taskStartMin + effectiveDuration;
             const passedMin = Math.max(0, Math.min(taskEndMin - taskStartMin, nowMinTehran - taskStartMin));
             const progressPct = taskEndMin > taskStartMin ? (passedMin / (taskEndMin - taskStartMin)) * 100 : 0;
             const isPast = !isFinished && nowMinTehran >= taskEndMin;
@@ -326,11 +336,17 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
                     <div className="grain" />
                   </div>
                 )}
+                {extendedMinutes > 0 && !isCompact && (
+                  <div className="tl-extend-marker" style={{ top: baseHeight }}>
+                    <span className="tl-extend-badge">+{extendedMinutes}m</span>
+                  </div>
+                )}
                 {isCompact ? (
                   <div className="tl-compact-row">
                     <span className="time">{t.time || "—"}</span>
                     {sub && <span className="compact-sub-icon" title={sub.title}>{sub.icon}</span>}
                     <span className="title">{t.title}</span>
+                    {extendedMinutes > 0 && <span className="compact-extend-badge">+{extendedMinutes}m</span>}
                     {hasOverlap && !isFinished && <span aria-label="Overlaps another item">⚠️</span>}
                   </div>
                 ) : (

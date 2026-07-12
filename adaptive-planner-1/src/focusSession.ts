@@ -49,12 +49,27 @@ export async function getActiveFocusSession(): Promise<FocusSession | null> {
 
 export async function startFocusSession(task: any): Promise<FocusSession | null> {
   const uid = await currentUserId();
+  const startedAt = task.started_at || Date.now();
+  const fullSeconds = (task.duration || 30) * 60;
+  let totalSeconds = fullSeconds;
+  // If the task had a scheduled time (e.g. 9:00, 90 min) and you actually
+  // started it late (e.g. 9:30), the timer should count down to the
+  // originally scheduled end time (10:30 → 60 min left), not restart a
+  // fresh full-length countdown. Starting early doesn't grant extra time —
+  // only lateness shrinks the window, never grows it.
+  if (task.date && task.time) {
+    const [y, m, d] = task.date.split("-").map(Number);
+    const [hh, mm] = task.time.split(":").map(Number);
+    const scheduledEndMs = new Date(y, m - 1, d, hh, mm).getTime() + fullSeconds * 1000;
+    const secondsUntilScheduledEnd = Math.round((scheduledEndMs - startedAt) / 1000);
+    totalSeconds = Math.max(0, Math.min(fullSeconds, secondsUntilScheduledEnd));
+  }
   const row: FocusSession = {
     user_id: uid,
     task_id: task.id,
     task_snapshot: task,
-    started_at: task.started_at || Date.now(),
-    total_seconds: (task.duration || 30) * 60,
+    started_at: startedAt,
+    total_seconds: totalSeconds,
     paused: false,
     paused_at: null,
     accumulated_pause_ms: 0,
@@ -84,7 +99,16 @@ export async function togglePauseFocusSession(s: FocusSession): Promise<FocusSes
 }
 
 export async function extendFocusSession(s: FocusSession, minutes: number): Promise<FocusSession | null> {
-  return updateFocusSession({ total_seconds: s.total_seconds + minutes * 60 });
+  const newExtended = (s.task_snapshot?.extended_minutes || 0) + minutes;
+  // Best-effort: reflect the extension on the actual task row so the
+  // Day Timeline draws the card longer with a "+Nm" marker. This isn't
+  // fatal if it fails (e.g. task was deleted mid-session) — the session
+  // timer itself is the source of truth for Focus Mode either way.
+  await supabase.from("tasks").update({ extended_minutes: newExtended }).eq("id", s.task_id);
+  return updateFocusSession({
+    total_seconds: s.total_seconds + minutes * 60,
+    task_snapshot: { ...s.task_snapshot, extended_minutes: newExtended },
+  });
 }
 
 export async function setFocusMinimized(minimized: boolean): Promise<FocusSession | null> {

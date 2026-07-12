@@ -63,7 +63,10 @@ export default function FocusMode({ session, onFinish, onBreak, onToggleSubtask 
           running underneath, on this device and any other open one. */}
       <button className="close-x" onClick={minimize} aria-label="Minimize focus session">×</button>
       <h2>{task.title}</h2>
-      <p style={{ color: "var(--muted)", fontSize: 13 }}>Focus mode · {Math.round(session.total_seconds / 60)} min planned</p>
+      <p style={{ color: "var(--muted)", fontSize: 13 }}>
+        Focus mode · {Math.round(session.total_seconds / 60)} min planned
+        {task.extended_minutes > 0 && <span style={{ color: "var(--accent-warm)", fontWeight: 700 }}> (+{task.extended_minutes}m added)</span>}
+      </p>
       <div className="focus-time" style={isOvertime ? { color: "var(--danger)" } : {}}>{mm}:{ss}</div>
       <div style={{ width: 240, height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden", marginBottom: 18 }}>
         <div style={{ width: `${pct}%`, height: "100%", background: isOvertime ? "var(--danger)" : "linear-gradient(90deg,var(--accent),var(--accent2))", transition: "width 1s linear" }} />
@@ -89,9 +92,9 @@ export default function FocusMode({ session, onFinish, onBreak, onToggleSubtask 
       )}
 
       <div className="mini-row" style={{ marginBottom: 18 }}>
-        <button className="mini-btn" onClick={() => extend(5)}>+5 min</button>
-        <button className="mini-btn" onClick={() => extend(10)}>+10 min</button>
         <button className="mini-btn" onClick={() => extend(15)}>+15 min</button>
+        <button className="mini-btn" onClick={() => extend(30)}>+30 min</button>
+        <button className="mini-btn" onClick={() => extend(45)}>+45 min</button>
       </div>
 
       <div className="split-btn">
