@@ -340,7 +340,7 @@ export default function App() {
     if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
   }
   async function delayTask(task: any, newDate: string) {
-    await saveTask({ ...task, date: newDate, status: "Delayed" }); setDetailTask(null);
+    await saveTask({ ...task, date: newDate, time: null, status: "Delayed" }); setDetailTask(null);
     if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
   }
   async function toggleSubtask(taskId: string, subtaskId: string) {
@@ -450,8 +450,11 @@ export default function App() {
   async function resolveReview(id: string, action: string, delayDate?: string) {
     if (action === "finish") await updateRow("tasks", id, { status: "Finished", finished_at: Date.now() });
     else if (action === "cancel") await updateRow("tasks", id, { status: "Cancelled" });
-    else if (action === "backlog") await updateRow("tasks", id, { date: todayStr(0), status: "Carried Over" });
-    else if (action === "delay") await updateRow("tasks", id, { date: delayDate, status: "Delayed" });
+    // Both "keep unscheduled" and "delay" move the task to a day's
+    // Unscheduled Tasks list, not back onto the timeline at its old time —
+    // clearing `time` is what actually makes it show up there.
+    else if (action === "backlog") await updateRow("tasks", id, { date: todayStr(0), time: null, status: "Carried Over" });
+    else if (action === "delay") await updateRow("tasks", id, { date: delayDate, time: null, status: "Delayed" });
     await reloadAll();
     setReviewTasks((prev) => prev.filter((t) => t.id !== id));
   }

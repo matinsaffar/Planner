@@ -41,13 +41,29 @@ export default function EndOfDayReview({ tasks, onResolve, onClose }: Props) {
           A few tasks never got started. No judgment — just decide what happens to each one.
         </p>
         {tasks.map((t) => (
-          <div className="review-item" key={t.id}>
+          <div className={"review-item" + (choices[t.id] ? " resolved" : "")} key={t.id}>
             <div className="title">{t.title} <span className="badge">{t.duration} min</span></div>
             <div className="review-actions">
-              <button className={choices[t.id] === "finish" ? "chosen" : ""} onClick={() => choose(t.id, "finish")}>Mark finished</button>
-              <button className={choices[t.id] === "delay" ? "chosen" : ""} onClick={() => choose(t.id, "delay")}>Delay</button>
-              <button className={choices[t.id] === "cancel" ? "chosen" : ""} onClick={() => choose(t.id, "cancel")}>Cancel</button>
-              <button className={choices[t.id] === "backlog" ? "chosen" : ""} onClick={() => choose(t.id, "backlog")}>Keep unscheduled</button>
+              <button
+                className={"review-action-btn finish" + (choices[t.id] === "finish" ? " chosen" : "")}
+                onClick={() => choose(t.id, "finish")}>
+                <span className="icon">✅</span> Mark finished
+              </button>
+              <button
+                className={"review-action-btn delay" + (choices[t.id] === "delay" ? " chosen" : "")}
+                onClick={() => choose(t.id, "delay")}>
+                <span className="icon">📅</span> Delay
+              </button>
+              <button
+                className={"review-action-btn cancel" + (choices[t.id] === "cancel" ? " chosen" : "")}
+                onClick={() => choose(t.id, "cancel")}>
+                <span className="icon">🗑️</span> Cancel
+              </button>
+              <button
+                className={"review-action-btn backlog" + (choices[t.id] === "backlog" ? " chosen" : "")}
+                onClick={() => choose(t.id, "backlog")}>
+                <span className="icon">📥</span> Keep unscheduled
+              </button>
             </div>
           </div>
         ))}

@@ -389,10 +389,19 @@ input[type="datetime-local"]::-webkit-date-and-time-value{
   font-size:16px;cursor:pointer;width:30px;height:30px;border-radius:50%;flex:0 0 auto;}
 .review-item{padding:14px;border-radius:14px;background:var(--glass);margin-bottom:10px;border:1px solid var(--border);}
 .review-item .title{font-weight:700;font-size:13px;margin-bottom:8px;}
-.review-actions{display:flex;gap:6px;flex-wrap:wrap;}
-.review-actions button{padding:7px 11px;font-size:11px;border-radius:8px;border:1px solid var(--border);
-  background:var(--glass);color:var(--muted);cursor:pointer;}
-.review-actions button.chosen{background:var(--accent);color:#0d1117;border-color:transparent;}
+.review-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.review-action-btn{display:flex;align-items:center;gap:8px;padding:11px 12px;font-size:12px;font-weight:700;
+  border-radius:12px;border:1px solid var(--border);background:var(--glass-strong);color:var(--ink);
+  cursor:pointer;transition:transform .12s,opacity .15s,box-shadow .15s;text-align:left;}
+.review-action-btn .icon{font-size:16px;flex:0 0 auto;line-height:1;}
+.review-action-btn:hover{box-shadow:0 4px 14px rgba(0,0,0,.18);}
+.review-action-btn:active{transform:scale(.97);}
+.review-action-btn.finish.chosen{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#0d1117;border-color:transparent;}
+.review-action-btn.delay.chosen{background:linear-gradient(120deg,var(--accent-warm),#f4a261);color:#0d1117;border-color:transparent;}
+.review-action-btn.cancel.chosen{background:var(--danger);color:#fff;border-color:transparent;}
+.review-action-btn.backlog.chosen{background:linear-gradient(120deg,#5b8bd6,#7dd3c0);color:#0d1117;border-color:transparent;}
+.review-item.resolved .review-action-btn:not(.chosen){opacity:.35;}
+@media (max-width:380px){ .review-actions{grid-template-columns:1fr;} }
 .loading-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   color:var(--accent);font-size:14px;background:var(--bg);gap:14px;}
 .color-swatches{display:flex;gap:8px;flex-wrap:wrap;}
