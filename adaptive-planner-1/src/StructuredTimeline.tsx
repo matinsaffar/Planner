@@ -329,6 +329,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
                 {isCompact ? (
                   <div className="tl-compact-row">
                     <span className="time">{t.time || "—"}</span>
+                    {sub && <span className="compact-sub-icon" title={sub.title}>{sub.icon}</span>}
                     <span className="title">{t.title}</span>
                     {hasOverlap && !isFinished && <span aria-label="Overlaps another item">⚠️</span>}
                   </div>

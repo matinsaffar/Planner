@@ -4,6 +4,7 @@
 :root{
   --font-ui:'Manrope',system-ui,sans-serif;
   --font-display:'Fraunces',serif;
+  --now-line-color:#3a4a6b;
 }
 [data-theme="dark"]{
   --bg:#0b0d14;
@@ -283,6 +284,7 @@ body.has-user-bg::before{
 .tl-item.compact{padding:3px 10px;justify-content:center;}
 .tl-compact-row{position:relative;z-index:2;display:flex;align-items:baseline;gap:6px;width:100%;min-width:0;}
 .tl-compact-row .time{flex:0 0 auto;font-size:10px;color:var(--muted);white-space:nowrap;}
+.tl-compact-row .compact-sub-icon{flex:0 0 auto;font-size:12px;line-height:1;}
 .tl-compact-row .title{flex:1 1 auto;min-width:0;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tl-item.custom-color .tl-compact-row .time{color:rgba(255,255,255,.85);}
 .tl-item:hover{transform:translateY(-1px);}
@@ -380,6 +382,30 @@ input[type="datetime-local"]::-webkit-date-and-time-value{
   background:var(--glass);border:1px solid var(--border);margin:0 6px 6px 0;font-size:12px;}
 .priority-dot{width:8px;height:8px;border-radius:50%;}
 .priority-Low{background:#9aa4b2;} .priority-Normal{background:var(--accent-warm);} .priority-High{background:var(--danger);}
+
+/* ==== Subtask checklist (liquid glass) ====
+   Shared look for the subtask list in FocusMode and TaskDetail: a translucent
+   glass row per subtask, a round custom checkbox, priority dot, and a
+   strike-through + fade once checked off. Sorted by priority (High → Normal
+   → Low) by the components that render this. */
+.focus-subtask-list{width:100%;max-width:300px;margin:0 0 18px;display:flex;flex-direction:column;gap:8px;text-align:left;}
+.focus-subtask-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
+.focus-subtask-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;cursor:pointer;
+  background:linear-gradient(155deg, var(--glass-strong) 0%, var(--glass) 70%);
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  border:1px solid var(--border);box-shadow:inset 0 1px 0 var(--glass-highlight,rgba(255,255,255,.12));
+  transition:opacity .2s,transform .15s;}
+.focus-subtask-item:active{transform:scale(.98);}
+.focus-subtask-item.done{opacity:.5;}
+.focus-subtask-item input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:20px;height:20px;
+  border-radius:50%;border:2px solid var(--border);background:rgba(255,255,255,.06);flex:0 0 20px;
+  cursor:pointer;position:relative;transition:.15s;}
+.focus-subtask-item input[type="checkbox"]:checked{background:linear-gradient(155deg,var(--accent),var(--accent2));border-color:transparent;}
+.focus-subtask-item input[type="checkbox"]:checked::after{content:"✓";position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;}
+.focus-subtask-title{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);
+  overflow-wrap:anywhere;}
+.focus-subtask-item.done .focus-subtask-title{text-decoration:line-through;color:var(--muted);}
 .theme-toggle{display:flex;border-radius:20px;overflow:hidden;border:1px solid var(--border);}
 .theme-toggle button{padding:6px 12px;font-size:12px;background:var(--glass);color:var(--muted);border:none;cursor:pointer;}
 .theme-toggle button.active{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#0d1117;font-weight:700;}
@@ -725,10 +751,12 @@ button.mini-btn[style*="position: absolute"], button.mini-btn[style*="position:a
   background:linear-gradient(180deg, color-mix(in oklab, var(--accent) 7%, transparent) 0%, transparent 100%);
 }
 .tl-now-line{position:absolute;left:0;right:0;height:0;pointer-events:none;z-index:4;
-  border-top:2px solid var(--danger);box-shadow:0 0 8px rgba(239,100,97,.6);}
+  border-top:2px solid var(--now-line-color);
+  box-shadow:0 0 8px color-mix(in oklab, var(--now-line-color) 65%, transparent);}
 .tl-now-line::before{content:"now";position:absolute;left:6px;top:-15px;font-size:9px;font-weight:800;
-  letter-spacing:.5px;text-transform:uppercase;color:#fff;background:var(--danger);
-  padding:1px 6px;border-radius:6px;}
+  letter-spacing:.5px;text-transform:uppercase;color:#fff;background:var(--now-line-color);
+  padding:1px 6px;border-radius:6px;
+  box-shadow:0 2px 6px color-mix(in oklab, var(--now-line-color) 50%, transparent);}
 
 /* ==== Minimized focus-mode drawer ====
    Docked near the bottom of the screen when a focus session is running but

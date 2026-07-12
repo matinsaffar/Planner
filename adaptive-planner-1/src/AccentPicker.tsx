@@ -14,9 +14,11 @@ interface Props {
   onImportData?: (data: any) => void;
   cardOpacity?: number;
   setCardOpacity?: (v: number) => void;
+  nowLineColor?: string;
+  setNowLineColor?: (v: string) => void;
 }
 
-export default function AccentPicker({ accents, setAccents, bgImage, setBgImage, bgOpacity = 0.35, setBgOpacity, exportData, onImportData, cardOpacity = 1, setCardOpacity }: Props) {
+export default function AccentPicker({ accents, setAccents, bgImage, setBgImage, bgOpacity = 0.35, setBgOpacity, exportData, onImportData, cardOpacity = 1, setCardOpacity, nowLineColor = "#3a4a6b", setNowLineColor }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [notifPerm, setNotifPerm] = useState(getNotificationPermission());
@@ -119,6 +121,20 @@ export default function AccentPicker({ accents, setAccents, bgImage, setBgImage,
             </div>
           </div>
         ))}
+        {setNowLineColor && (
+          <div style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 6 }}>
+              "Now" line (Day Timeline)
+            </label>
+            <div className="color-swatches">
+              <input type="color" value={nowLineColor} onChange={(e) => setNowLineColor(e.target.value)}
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer" }} />
+              <span style={{ fontSize: 12, color: "var(--muted)", alignSelf: "center" }}>
+                Color of the live line marking the current time.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="glass section" style={{ margin: "0 16px 16px" }}>

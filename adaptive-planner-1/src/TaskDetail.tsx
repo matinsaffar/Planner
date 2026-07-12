@@ -3,11 +3,15 @@ import { formatJalaali } from "./jalaali";
 import JalaaliPicker from "./JalaaliPicker";
 import { todayStr } from "./seed";
 
-export default function TaskDetail({ task, subInfo, catInfo, isPastDue, onStart, onFinishDirect, onDelay, onCancel, onClose, onEdit }: any) {
+export default function TaskDetail({ task, subInfo, catInfo, isPastDue, onStart, onFinishDirect, onDelay, onCancel, onClose, onEdit, onToggleSubtask }: any) {
   const [delayMode, setDelayMode] = useState(false);
   const [delayChoice, setDelayChoice] = useState<"tomorrow" | "other">("tomorrow");
   const [delayDate, setDelayDate] = useState(todayStr(1));
   const sub = subInfo(task.category, task.subcategory);
+  const PRIORITY_RANK: Record<string, number> = { High: 0, Normal: 1, Low: 2 };
+  const subtasks = [...(task.subtasks || [])].sort(
+    (a: any, b: any) => (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1)
+  );
 
   function pickDelay(choice: "tomorrow" | "other") {
     setDelayChoice(choice);
@@ -30,12 +34,21 @@ export default function TaskDetail({ task, subInfo, catInfo, isPastDue, onStart,
           {catInfo(task.category)?.name} · <span className="badge">{sub?.title}</span> · {task.duration} min · {formatJalaali(task.date)}
         </p>
         {task.notes && <p style={{ fontSize: 13 }}>{task.notes}</p>}
-        {task.subtasks?.length > 0 && (
-          <div style={{ marginBottom: 10 }}>
-            {task.subtasks.map((s: any) => (
-              <span key={s.id} className="subtask-chip">
-                <span className={`priority-dot priority-${s.priority}`} />{s.title}
-              </span>
+        {subtasks.length > 0 && (
+          <div className="focus-subtask-list" style={{ maxWidth: "none", margin: "0 0 14px" }}>
+            <div className="focus-subtask-label">
+              Subtasks · {subtasks.filter((s: any) => s.done).length}/{subtasks.length}
+            </div>
+            {subtasks.map((s: any) => (
+              <label key={s.id} className={"focus-subtask-item" + (s.done ? " done" : "")}>
+                <input
+                  type="checkbox"
+                  checked={!!s.done}
+                  onChange={() => onToggleSubtask && onToggleSubtask(s.id)}
+                />
+                <span className={`priority-dot priority-${s.priority}`} />
+                <span className="focus-subtask-title">{s.title}</span>
+              </label>
             ))}
           </div>
         )}

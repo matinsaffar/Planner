@@ -21,7 +21,7 @@ import GoalFlow from "./GoalFlow";
 import { contrastText } from "./colorUtils";
 import FocusMode from "./FocusMode";
 import FocusDrawer from "./FocusDrawer";
-import { FocusSession, getActiveFocusSession, startFocusSession, subscribeFocusSession, setFocusMinimized, endFocusSession } from "./focusSession";
+import { FocusSession, getActiveFocusSession, startFocusSession, subscribeFocusSession, setFocusMinimized, endFocusSession, updateFocusSession } from "./focusSession";
 import SearchOverlay from "./SearchOverlay";
 import EmptyState from "./EmptyState";
 import BadgePicker from "./BadgePicker";
@@ -54,6 +54,16 @@ export default function App() {
     setCardOpacityState(v);
     localStorage.setItem("tl-card-opacity", String(v));
   }
+  const [nowLineColor, setNowLineColorState] = useState<string>(() => {
+    return localStorage.getItem("tl-now-line-color") || "#3a4a6b";
+  });
+  function setNowLineColor(v: string) {
+    setNowLineColorState(v);
+    localStorage.setItem("tl-now-line-color", v);
+  }
+  useEffect(() => {
+    document.documentElement.style.setProperty("--now-line-color", nowLineColor);
+  }, [nowLineColor]);
   const [selectedDate, setSelectedDate] = useState(todayStr(0));
 
   const [flow, setFlow] = useState<null | "plan" | "reminder" | "block">(null);
@@ -275,9 +285,13 @@ export default function App() {
   async function breakFocus(task: any, remainingMinutes: number) {
     await saveTask({ ...task, status: "Broken" });
     if (remainingMinutes > 2) {
+      // Whatever the person already checked off is done — no need to carry
+      // it forward. Only the still-unchecked subtasks move to the
+      // continuation task, so it doesn't re-list finished work.
+      const carriedSubtasks = (task.subtasks || []).filter((s: any) => !s.done);
       await saveTask({ id: uid(), title: task.title + " (continued)", category: task.category,
         subcategory: task.subcategory, duration: remainingMinutes, date: todayStr(0), time: null,
-        status: "Planned", notes: task.notes, subtasks: [], goals: task.goals });
+        status: "Planned", notes: task.notes, subtasks: carriedSubtasks, goals: task.goals });
     }
     sound.break();
     if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
@@ -285,6 +299,21 @@ export default function App() {
   async function delayTask(task: any, newDate: string) {
     await saveTask({ ...task, date: newDate, status: "Delayed" }); setDetailTask(null);
     if (focusSession && focusSession.task_id === task.id) { await endFocusSession(); setFocusSession(null); }
+  }
+  async function toggleSubtask(taskId: string, subtaskId: string) {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (!task) return;
+    const updatedSubtasks = (task.subtasks || []).map((s: any) => s.id === subtaskId ? { ...s, done: !s.done } : s);
+    await updateRow("tasks", taskId, { subtasks: updatedSubtasks });
+    await reloadAll();
+    // FocusMode reads from the session's task_snapshot (so every open device
+    // shows the same list), not live task data — keep that snapshot in sync
+    // too, or the checkbox would appear to "not stick" inside Focus Mode.
+    if (focusSession && focusSession.task_id === taskId) {
+      const updated = await updateFocusSession({ task_snapshot: { ...focusSession.task_snapshot, subtasks: updatedSubtasks } });
+      if (updated) setFocusSession(updated);
+    }
+    if (detailTask && detailTask.id === taskId) setDetailTask({ ...detailTask, subtasks: updatedSubtasks });
   }
   async function cancelTask(task: any) {
     await updateRow("tasks", task.id, { status: "Cancelled" }); await reloadAll(); setDetailTask(null);
@@ -413,7 +442,7 @@ export default function App() {
         <EndOfDayReview tasks={reviewTasks} onResolve={resolveReview} onClose={() => setReviewTasks([])} />
       )}
       {focusSession && !focusSession.minimized && (
-        <FocusMode session={focusSession} onFinish={finishFocus} onBreak={breakFocus} />
+        <FocusMode session={focusSession} onFinish={finishFocus} onBreak={breakFocus} onToggleSubtask={toggleSubtask} />
       )}
       {focusSession && focusSession.minimized && (
         <FocusDrawer
@@ -620,6 +649,7 @@ export default function App() {
           exportData={() => ({ tasks, goals, reminders, blocks, categories, subcategories, exportedAt: new Date().toISOString() })}
           onImportData={handleImportBackup}
           cardOpacity={cardOpacity} setCardOpacity={setCardOpacity}
+          nowLineColor={nowLineColor} setNowLineColor={setNowLineColor}
         />
       )}
 
@@ -709,6 +739,7 @@ export default function App() {
           onCancel={() => cancelTask(detailTask)}
           onClose={() => setDetailTask(null)}
           onEdit={(t: any) => { setEditTask(t); setDetailTask(null); }}
+          onToggleSubtask={(subtaskId: string) => toggleSubtask(detailTask.id, subtaskId)}
         />
       )}
       {editTask && (

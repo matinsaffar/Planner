@@ -13,7 +13,10 @@ interface Props {
   session: FocusSession;
   onFinish: (task: any) => void;
   onBreak: (task: any, remainingMinutes: number) => void;
+  onToggleSubtask?: (taskId: string, subtaskId: string) => void;
 }
+
+const PRIORITY_RANK: Record<string, number> = { High: 0, Normal: 1, Low: 2 };
 
 // Full-screen focus timer. Unlike the old version, this never owns the
 // clock itself — `session` is the shared row from `focus_sessions`, kept in
@@ -21,7 +24,7 @@ interface Props {
 // This component just re-renders once a second and re-derives elapsed time
 // from the session's timestamps, and writes user actions (pause, extend,
 // minimize) back to that row so every other open device sees them too.
-export default function FocusMode({ session, onFinish, onBreak }: Props) {
+export default function FocusMode({ session, onFinish, onBreak, onToggleSubtask }: Props) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -36,6 +39,9 @@ export default function FocusMode({ session, onFinish, onBreak }: Props) {
   const remainingMinutes = Math.ceil(remaining / 60);
   const pct = Math.min(100, (elapsed / session.total_seconds) * 100);
   const isOvertime = remaining === 0;
+  const subtasks = [...(task.subtasks || [])].sort(
+    (a: any, b: any) => (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1)
+  );
 
   async function togglePause() { sound.pause(); await togglePauseFocusSession(session); }
   async function extend(minutes: number) { sound.step(); await extendFocusSession(session, minutes); }
@@ -62,6 +68,25 @@ export default function FocusMode({ session, onFinish, onBreak }: Props) {
       <div style={{ width: 240, height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden", marginBottom: 18 }}>
         <div style={{ width: `${pct}%`, height: "100%", background: isOvertime ? "var(--danger)" : "linear-gradient(90deg,var(--accent),var(--accent2))", transition: "width 1s linear" }} />
       </div>
+
+      {subtasks.length > 0 && (
+        <div className="focus-subtask-list">
+          <div className="focus-subtask-label">
+            Subtasks · {subtasks.filter((s: any) => s.done).length}/{subtasks.length}
+          </div>
+          {subtasks.map((s: any) => (
+            <label key={s.id} className={"focus-subtask-item" + (s.done ? " done" : "")}>
+              <input
+                type="checkbox"
+                checked={!!s.done}
+                onChange={() => onToggleSubtask && onToggleSubtask(task.id, s.id)}
+              />
+              <span className={`priority-dot priority-${s.priority}`} />
+              <span className="focus-subtask-title">{s.title}</span>
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="mini-row" style={{ marginBottom: 18 }}>
         <button className="mini-btn" onClick={() => extend(5)}>+5 min</button>

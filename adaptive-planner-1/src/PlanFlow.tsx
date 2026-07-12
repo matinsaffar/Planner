@@ -59,7 +59,7 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
 
   function addSubtask() {
     if (!subtaskInput) return;
-    setSubtasks([...subtasks, { id: uid(), title: subtaskInput, priority: subtaskPriority }]);
+    setSubtasks([...subtasks, { id: uid(), title: subtaskInput, priority: subtaskPriority, done: false }]);
     setSubtaskInput("");
   }
   function removeSubtask(id: string) { setSubtasks(subtasks.filter((s) => s.id !== id)); }
