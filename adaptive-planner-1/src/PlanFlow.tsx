@@ -45,7 +45,7 @@ export default function PlanFlow({ categories, subcategories, goals, allTasks = 
   const catObj = categories.find((c: any) => c.id === category);
   const subsOfCat = subcategories.filter((s: any) => s.category_id === category);
   const subObj = subcategories.find((s: any) => s.id === subcategory);
-  const relevantGoals = goals.filter((g: any) => g.category === category && g.subcategory === subcategory);
+  const relevantGoals = goals.filter((g: any) => g.category === category && g.subcategory === subcategory && !g.achieved);
 
   function next() { sound.step(); setStep((s) => Math.min(steps.length - 1, s + 1)); }
   function back() { sound.step(); setStep((s) => Math.max(0, s - 1)); }
