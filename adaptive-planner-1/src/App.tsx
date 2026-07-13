@@ -11,6 +11,7 @@ import SubcategoryDetail from "./SubcategoryDetail";
 import StructuredTimeline from "./StructuredTimeline";
 import DayScroller from "./DayScroller";
 import RemindersDropdown from "./RemindersDropdown";
+import MonthDensityCalendar from "./MonthDensityCalendar";
 import PlanFlow from "./PlanFlow";
 import ReminderFlow from "./ReminderFlow";
 import BlockFlow from "./BlockFlow";
@@ -621,6 +622,14 @@ export default function App() {
             </div>
           </div>
           <RemindersDropdown reminders={visibleReminders} onEdit={setEditReminder} onHide={hideReminder} isNear={isReminderNear} />
+          <div className="glass section">
+            <h2>This Month</h2>
+            <MonthDensityCalendar
+              tasks={tasks}
+              initialDate={selectedDate}
+              onSelectDate={(d: string) => { setSelectedDate(d); goToTab("tasks"); }}
+            />
+          </div>
           <div className="glass section">
             <h2>Categories</h2>
             <div className="cat-grid">

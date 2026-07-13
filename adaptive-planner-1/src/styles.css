@@ -363,6 +363,33 @@ input[type="datetime-local"]::-webkit-date-and-time-value{
   text-transform:uppercase;color:var(--muted);padding:2px 0;}
 .jalaali-cell.blank{cursor:default;pointer-events:none;visibility:hidden;}
 
+/* ==== Month density calendar (Home tab) ==== */
+.month-density-cal{width:100%;}
+.month-density-jump{font-size:11px;font-weight:600;color:var(--accent);}
+.month-density-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:6px;}
+.month-density-cell{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;border-radius:10px;border:1px solid transparent;background:var(--glass);
+  color:var(--ink);font-size:12px;cursor:pointer;padding:0;transition:transform .12s ease,background .15s ease,border-color .15s ease;}
+.month-density-cell:hover{background:var(--glass-strong);}
+.month-density-cell:active{transform:scale(.92);}
+.month-density-cell.blank{visibility:hidden;pointer-events:none;background:transparent;}
+.month-density-cell.today{border-color:var(--accent);font-weight:800;box-shadow:0 0 0 1px var(--accent) inset;}
+.month-density-cell.overdue{border-color:var(--danger);}
+.month-density-cell.all-done{opacity:.6;}
+.month-density-daynum{line-height:1;}
+.month-density-dot{display:block;width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.5;}
+.month-density-dot.level-1{background:var(--accent2);opacity:.65;width:5px;height:5px;}
+.month-density-dot.level-2{background:var(--accent-warm);opacity:.85;width:7px;height:7px;}
+.month-density-dot.level-3{background:var(--accent);opacity:1;width:8px;height:8px;box-shadow:0 0 6px color-mix(in oklab, var(--accent) 60%, transparent);}
+.month-density-cell.overdue .month-density-dot{background:var(--danger) !important;}
+.month-density-cell.all-done .month-density-dot{background:#4f9d69 !important;}
+.month-density-legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;font-size:11px;color:var(--muted);}
+.month-density-legend span{display:flex;align-items:center;gap:4px;}
+.month-density-legend-count{font-weight:700;color:var(--ink);margin-right:4px;}
+.month-density-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;}
+.month-density-legend i.overdue-dot{background:var(--danger);}
+@media(max-width:380px){ .month-density-cell{font-size:10px;} .month-density-dot{width:4px;height:4px;} }
+
 /* ==== Weekly slots picker (class-schedule-style recurrence) ==== */
 .weekly-slots-picker{display:flex;flex-direction:column;}
 .weekly-slot-row{border:1px solid var(--border);border-radius:14px;padding:10px;margin-bottom:8px;
