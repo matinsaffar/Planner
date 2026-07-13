@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { all, insertRow, updateRow, upsertRow, deleteRow, uid } from "./db";
 import { seedIfEmpty, todayStr, daysUntil } from "./seed";
 import { supabase } from "./supabaseClient";
@@ -489,10 +489,61 @@ export default function App() {
     return d <= 1;
   }
 
+  const TAB_ORDER: Tab[] = ["home", "tasks", "categories", "goals", "settings"];
+  function goToTab(next: Tab) {
+    if (next === tab) return;
+    setTab(next);
+    if (next === "home") setSelectedDate(today);
+    if (next !== "settings") reloadAll();
+    sound.navigate();
+  }
+
+  // === Swipe left/right to switch tabs ===
+  // Left = next tab, right = previous tab (same convention as swiping
+  // through photos). Only fires on a clearly horizontal gesture, and stays
+  // out of the way of anything that owns its own horizontal interaction —
+  // sliders, time/color inputs, the calendar, weekday chip rows — plus any
+  // modal/overlay/full-focus-screen currently open.
+  const swipeStartRef = useRef<{ x: number; y: number; target: EventTarget | null } | null>(null);
+  const SWIPE_IGNORE_SELECTOR = [
+    "input", "select", "textarea",
+    ".timeline-scroll", ".unstarted-panel",
+    ".jalaali-grid", ".jalaali-nav", ".cal-toggle",
+    ".weekly-slot-times", ".weekday-chip-row",
+    ".mini-row", ".split-btn", ".day-buttons", ".notify-options",
+    ".focus-screen", ".focus-drawer",
+    "[data-no-swipe]",
+  ].join(",");
+  function isModalOpen() {
+    return !!(
+      flow || showAdd || detailTask || editTask || editReminder || openSub ||
+      editBlockState || pendingDrop || conflictInfo || reviewTasks.length > 0 ||
+      (focusSession && !focusSession.minimized)
+    );
+  }
+  function handleAppTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, target: e.target };
+  }
+  function handleAppTouchEnd(e: React.TouchEvent) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || isModalOpen()) return;
+    const startEl = start.target as HTMLElement | null;
+    if (startEl?.closest?.(SWIPE_IGNORE_SELECTOR)) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+    const idx = TAB_ORDER.indexOf(tab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) goToTab(TAB_ORDER[idx + 1]);
+    else if (dx > 0 && idx > 0) goToTab(TAB_ORDER[idx - 1]);
+  }
+
   if (!ready) return <div className="loading-screen">Loading your planner…</div>;
 
   return (
-    <div>
+    <div onTouchStart={handleAppTouchStart} onTouchEnd={handleAppTouchEnd}>
       {reviewTasks.length > 0 && (
         <EndOfDayReview tasks={reviewTasks} onResolve={resolveReview} onClose={() => setReviewTasks([])} />
       )}
@@ -538,11 +589,11 @@ export default function App() {
       )}
 
       <div className="nav">
-        <button className={tab === "home" ? "active" : ""} onClick={() => { setTab("home"); setSelectedDate(today); reloadAll(); sound.navigate(); }}>Home</button>
-        <button className={tab === "tasks" ? "active" : ""} onClick={() => { setTab("tasks"); reloadAll(); sound.navigate(); }}>Tasks</button>
-        <button className={tab === "categories" ? "active" : ""} onClick={() => { setTab("categories"); reloadAll(); sound.navigate(); }}>Categories</button>
-        <button className={tab === "goals" ? "active" : ""} onClick={() => { setTab("goals"); reloadAll(); sound.navigate(); }}>Goals</button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); sound.navigate(); }}>⚙️</button>
+        <button className={tab === "home" ? "active" : ""} onClick={() => goToTab("home")}>Home</button>
+        <button className={tab === "tasks" ? "active" : ""} onClick={() => goToTab("tasks")}>Tasks</button>
+        <button className={tab === "categories" ? "active" : ""} onClick={() => goToTab("categories")}>Categories</button>
+        <button className={tab === "goals" ? "active" : ""} onClick={() => goToTab("goals")}>Goals</button>
+        <button className={tab === "settings" ? "active" : ""} onClick={() => goToTab("settings")}>⚙️</button>
       </div>
 
       {tab === "home" && (
