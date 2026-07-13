@@ -597,7 +597,7 @@ export default function App() {
       </div>
 
       {tab === "home" && (
-        <>
+        <div className="tab-panel">
           <div className="glass section">
             <h2>Today's Tasks</h2>
             {todaysTasks.length === 0 && <EmptyState type="tasksToday" />}
@@ -633,11 +633,11 @@ export default function App() {
               {categories.length === 0 && <EmptyState type="categories" fallback="No categories yet — head to the Categories tab to create one." />}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {tab === "tasks" && (
-        <>
+        <div className="tab-panel">
           <DayScroller selectedDate={selectedDate} onSelect={setSelectedDate} />
           <StructuredTimeline
             key={selectedDate}
@@ -653,11 +653,11 @@ export default function App() {
             cardOpacity={cardOpacity}
             selectedDate={selectedDate}
           />
-        </>
+        </div>
       )}
 
       {tab === "categories" && (
-        <div style={{ margin: "0 16px 16px" }}>
+        <div className="tab-panel" style={{ margin: "0 16px 16px" }}>
           <CategoryManager
             categories={categories} subcategories={subcategories}
             onAddCategory={addCategory} onEditCategory={editCategory} onDeleteCategory={deleteCategory}
@@ -668,7 +668,7 @@ export default function App() {
       )}
 
       {tab === "goals" && (
-        <>
+        <div className="tab-panel">
           <div className="section glass">
             <h2>Goals <button className="expand-btn" onClick={() => setShowGoalFlow(true)}>+ New Goal</button></h2>
             {categories.map((c: any) => {
@@ -720,7 +720,7 @@ export default function App() {
               })}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {badgePromptGoal && (
@@ -749,16 +749,18 @@ export default function App() {
       )}
 
       {tab === "settings" && (
-        <AccentPicker
-          accents={accents} setAccents={setAccents}
-          bgImage={bgImage} setBgImage={setBgImage}
-          bgOpacity={bgOpacity} setBgOpacity={setBgOpacity}
-          exportData={() => ({ tasks, goals, reminders, blocks, categories, subcategories, exportedAt: new Date().toISOString() })}
-          onImportData={handleImportBackup}
-          cardOpacity={cardOpacity} setCardOpacity={setCardOpacity}
-          nowLineColor={nowLineColor} setNowLineColor={setNowLineColor}
-          onPushSubscribed={savePushSubscription}
-        />
+        <div className="tab-panel">
+          <AccentPicker
+            accents={accents} setAccents={setAccents}
+            bgImage={bgImage} setBgImage={setBgImage}
+            bgOpacity={bgOpacity} setBgOpacity={setBgOpacity}
+            exportData={() => ({ tasks, goals, reminders, blocks, categories, subcategories, exportedAt: new Date().toISOString() })}
+            onImportData={handleImportBackup}
+            cardOpacity={cardOpacity} setCardOpacity={setCardOpacity}
+            nowLineColor={nowLineColor} setNowLineColor={setNowLineColor}
+            onPushSubscribed={savePushSubscription}
+          />
+        </div>
       )}
 
       <button className="fab" onClick={() => { setShowAdd(true); setFlow(null); sound.navigate(); }}>+</button>

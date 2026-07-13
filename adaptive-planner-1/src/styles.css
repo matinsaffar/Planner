@@ -797,6 +797,51 @@ button.mini-btn[style*="position: absolute"], button.mini-btn[style*="position:a
   padding:1px 6px;border-radius:6px;
   box-shadow:0 2px 6px color-mix(in oklab, var(--now-line-color) 50%, transparent);}
 
+/* ==== Smooth animation pass ==== */
+
+/* Switching tabs (click or swipe) fades + slides the new panel in, instead
+   of content just snapping into place. */
+.tab-panel{animation:tabPanelIn .32s cubic-bezier(.2,.8,.2,1);}
+@keyframes tabPanelIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+
+/* Press feedback: anything tappable eases down slightly on press instead of
+   changing state with no motion at all. Buttons already animating their own
+   way (split-btn, weekday-chip, review-action-btn, focus-drawer, mini-btn)
+   keep their existing transitions untouched. */
+.btn, .opt-btn, .card-edit-btn, .close-x, .mute-btn, .notify-chip,
+.day-buttons button, .cal-toggle button, .expand-btn {
+  transition: transform .12s ease, box-shadow .15s ease, opacity .15s ease, background .15s ease, color .15s ease;
+}
+.btn:active, .opt-btn:active, .card-edit-btn:active, .close-x:active, .mute-btn:active,
+.notify-chip:active, .day-buttons button:active, .cal-toggle button:active, .expand-btn:active {
+  transform: scale(.96);
+}
+.close-x{transition:transform .15s ease, background .15s ease;}
+.close-x:hover{transform:rotate(90deg);}
+
+/* Color/accent swatches pop when selected instead of just re-tinting. */
+.swatch{transition:transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s ease;}
+.swatch.sel{transform:scale(1.15);box-shadow:0 2px 10px rgba(0,0,0,.3);}
+.swatch:active{transform:scale(.9);}
+
+/* Subtask checkbox: a quick pop on check instead of an instant color swap. */
+.focus-subtask-item input[type="checkbox"]{transition:background .15s ease, border-color .15s ease, transform .15s cubic-bezier(.34,1.56,.64,1);}
+.focus-subtask-item input[type="checkbox"]:checked{animation:checkPop .28s cubic-bezier(.34,1.56,.64,1);}
+@keyframes checkPop{0%{transform:scale(.7);}60%{transform:scale(1.15);}100%{transform:scale(1);}}
+.focus-subtask-item{transition:opacity .25s ease;}
+.focus-subtask-title{transition:color .2s ease;}
+
+/* Tab bar: smooth color/weight transition on the active tab instead of an
+   instant swap, plus a tiny settle animation so the new active tab doesn't
+   feel static. */
+.nav button{transition:color .18s ease, background .18s ease, transform .12s ease;}
+button.active{animation:tabActivate .22s ease;}
+@keyframes tabActivate{ from{ transform:scale(.94); } to{ transform:scale(1); } }
+
+/* Toasts / inline confirmation messages (export/import success, etc.) ease
+   in rather than appearing abruptly. */
+.review-item, .meeting-row, .goal-row{animation:fadeIn .3s ease;}
+
 /* ==== Minimized focus-mode drawer ====
    Docked near the bottom of the screen when a focus session is running but
    minimized. Tapping it (or dragging it up, on touch) restores the full
