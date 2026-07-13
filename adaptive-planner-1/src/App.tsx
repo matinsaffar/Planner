@@ -600,6 +600,7 @@ export default function App() {
             onEditBlock={(b: any) => setEditBlockState({ ...b })}
             onDeleteBlock={removeBlock}
             cardOpacity={cardOpacity}
+            selectedDate={selectedDate}
           />
         </>
       )}

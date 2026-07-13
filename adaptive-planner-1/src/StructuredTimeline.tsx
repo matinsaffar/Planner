@@ -13,6 +13,7 @@ interface Props {
   onEditBlock?: (block: any) => void;
   onDeleteBlock?: (blockId: string) => void;
   cardOpacity?: number;
+  selectedDate: string;
 }
 
 const START_HOUR = 0;
@@ -39,8 +40,25 @@ function tehranMinutes(): number {
   }
 }
 
+// Today's date (YYYY-MM-DD) in Asia/Tehran — used to tell whether the day
+// currently being viewed is actually "today", so the "now" line and any
+// past/in-progress styling only apply to today's timeline, not whichever
+// day happens to be on screen.
+function tehranDateStr(): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const d = parts.find((p) => p.type === "day")?.value;
+    return `${y}-${m}-${d}`;
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
 
-export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = [], subInfo, onOpenTask, onDropTask, onReplaceConflict, onEditBlock, onDeleteBlock, cardOpacity = 1 }: Props) {
+export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = [], subInfo, onOpenTask, onDropTask, onReplaceConflict, onEditBlock, onDeleteBlock, cardOpacity = 1, selectedDate }: Props) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [ghostTop, setGhostTop] = useState<number | null>(null);
@@ -58,6 +76,7 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
     const id = setInterval(() => setNowMinTehran(tehranMinutes()), 15000);
     return () => clearInterval(id);
   }, []);
+  const isToday = selectedDate === tehranDateStr();
 
   // Prevent iOS/Safari from navigating when a drag payload (task UUID)
   // is dropped outside the timeline.
@@ -200,12 +219,18 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
           onDrop={handleDrop}
           style={{ position: "relative", height: hourMarks.length * HOUR_HEIGHT }}
         >
-          {/* Hours fully before "now" read as dimmed/desaturated; hours still
-              ahead get a faint accent wash instead so the two zones contrast
-              clearly. Heights are derived straight from nowMinTehran, so
-              both bands advance every tick without extra state. */}
+          {/* The "now" line and the past/future split only make sense on
+              today's timeline — a day you're not currently living through
+              has no "now" on it. Viewing a past day dims the whole thing
+              (it's over); a future day gets no dimming (nothing's happened
+              yet, no matter what the clock says). */}
           {(() => {
             const totalPx = (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT;
+            if (!isToday) {
+              return selectedDate < tehranDateStr()
+                ? <div className="tl-hour-band past" style={{ top: 0, height: totalPx }} />
+                : null;
+            }
             const pastPx = Math.max(0, Math.min(totalPx, (nowMinTehran - START_HOUR * 60) * (HOUR_HEIGHT / 60)));
             return (
               <>
@@ -214,13 +239,15 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
               </>
             );
           })()}
-          <div
-            className="tl-now-line"
-            style={{ top: Math.max(0, Math.min(
-              (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT,
-              (nowMinTehran - START_HOUR * 60) * (HOUR_HEIGHT / 60)
-            )) }}
-          />
+          {isToday && (
+            <div
+              className="tl-now-line"
+              style={{ top: Math.max(0, Math.min(
+                (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT,
+                (nowMinTehran - START_HOUR * 60) * (HOUR_HEIGHT / 60)
+              )) }}
+            />
+          )}
           {hourMarks.map((h) => (
             <div key={h} style={{ position: "absolute", top: (h - START_HOUR) * HOUR_HEIGHT, left: 0, right: 0,
               borderTop: "1px solid var(--border)", pointerEvents: "none", zIndex: 0 }}>
@@ -308,8 +335,12 @@ export default function StructuredTimeline({ tasksWithTime, unstarted, blocks = 
             taskEndMin = taskStartMin + effectiveDuration;
             const passedMin = Math.max(0, Math.min(taskEndMin - taskStartMin, nowMinTehran - taskStartMin));
             const progressPct = taskEndMin > taskStartMin ? (passedMin / (taskEndMin - taskStartMin)) * 100 : 0;
-            const isPast = !isFinished && nowMinTehran >= taskEndMin;
-            const isInProgress = !isFinished && nowMinTehran >= taskStartMin && nowMinTehran < taskEndMin;
+            // "Past"/"in progress" are today-relative concepts — a task on
+            // a bygone day is just past (not because the clock says so),
+            // and a task on a future day hasn't started no matter what
+            // time of day it's scheduled for.
+            const isPast = !isFinished && (isToday ? nowMinTehran >= taskEndMin : selectedDate < tehranDateStr());
+            const isInProgress = !isFinished && isToday && nowMinTehran >= taskStartMin && nowMinTehran < taskEndMin;
             // Below ~56px there isn't room for the normal 3-line stack
             // (time / title / subcategory chip) without the flex box
             // clipping something — collapse to a single condensed row
